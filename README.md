@@ -1,94 +1,41 @@
-# Financial Dashboard - Interactive Analytics
+# 💰 Financial Analytics Dashboard
 
-A beautiful, interactive financial dashboard built with Python and Streamlit for visualizing transaction data.
+Interactive financial dashboard built with Python and Streamlit for visualizing transaction data and spending patterns.
 
-## Features
+## 🚀 Live Demo
 
-- 📊 **Interactive Visualizations**: Multiple charts including balance over time, income vs expenses, category breakdowns, and more
-- 🔍 **Advanced Filtering**: Filter by year, product type, and transaction type
-- 💰 **Key Metrics**: Real-time calculation of balance, income, expenses, and net flow
-- 📋 **Transaction Table**: View and explore recent transactions
-- 📥 **Data Export**: Download filtered data as CSV
+- **Streamlit App**: [View Dashboard](https://financial-analytics-sarasaad.streamlit.app)
 
-## Installation
+## ✨ Features
 
-1. Create and activate a virtual environment (recommended):
+- 📊 Interactive visualizations (charts, maps, heatmaps)
+- 🔍 Advanced filtering (year, product, transaction type)
+- 💰 Real-time metrics and insights
+- 🌍 Country comparison and geospatial analysis
+- 📥 Data export capabilities
+
+## 🛠️ Quick Start
+
 ```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-# venv\Scripts\activate
-```
-
-2. Install the required packages:
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-## Usage
-
-1. Make sure the CSV file `Dataset - Sara Saad.csv` is in the same directory as `dashboard.py`
-
-2. Activate the virtual environment (if not already activated):
-```bash
-source venv/bin/activate  # macOS/Linux
-# or
-venv\Scripts\activate  # Windows
-```
-
-3. Run the Streamlit app:
-```bash
+# Run dashboard
 streamlit run dashboard.py
 ```
 
-3. The dashboard will open in your default web browser at `http://localhost:8501`
+## 📋 Requirements
 
-## Dashboard Components
+Python 3.8+, Streamlit, Pandas, Plotly, NumPy
 
-### Key Metrics
-- Current Balance
-- Total Income
-- Total Expenses
-- Net Flow
+## 📊 Data Format
 
-### Visualizations
-1. **Balance Over Time**: Line chart showing account balance trends
-2. **Monthly Income vs Expenses**: Bar chart comparing monthly income and expenses
-3. **Expenses by Category**: Pie chart showing spending distribution
-4. **Transaction Types Distribution**: Bar chart of transaction type frequencies
-5. **Spending by Day of Week**: Bar chart showing spending patterns by weekday
-6. **Spending by Hour of Day**: Line chart showing spending patterns throughout the day
+CSV with columns: `Type`, `Product`, `Amount`, `Balance`, `Year`, `Month`, `Day`, `Weekday`, `Hour`, `Amount_Abs`, `Description_Anon`, `Merchant_Category`, `Country` (optional), `City` (optional)
 
-### Filters
-- Year selection
-- Product type (Current, Savings, Deposit)
-- Transaction type (Card Payment, Transfer, Topup, etc.)
+## 📚 Documentation
 
-## Requirements
+See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment instructions.
 
-- Python 3.8+
-- Streamlit
-- Pandas
-- Plotly
-- NumPy
+## 🔒 Privacy
 
-## Data Format
-
-The dashboard expects a CSV file with the following columns:
-- Type
-- Product
-- Amount
-- Balance
-- Year
-- Month
-- Day
-- Weekday
-- Hour
-- Amount_Abs
-- Description_Anon
-- Merchant_Category
-
+Public deployment uses dummy data. Real data is excluded via `.gitignore`.
