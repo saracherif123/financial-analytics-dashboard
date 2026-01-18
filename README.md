@@ -32,9 +32,6 @@ Python 3.8+, Streamlit, Pandas, Plotly, NumPy
 
 CSV with columns: `Type`, `Product`, `Amount`, `Balance`, `Year`, `Month`, `Day`, `Weekday`, `Hour`, `Amount_Abs`, `Description_Anon`, `Merchant_Category`, `Country` (optional), `City` (optional)
 
-## 📚 Documentation
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment instructions.
 
 ## 🔒 Privacy
 
