@@ -34,3 +34,6 @@ Thumbs.db
 # Real data (keep private - use dummy data for public repos)
 Dataset - Sara Saad.csv
 
+# Verification/debugging scripts
+verify_data.py
+verify_income.py
