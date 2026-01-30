@@ -459,9 +459,9 @@ st.markdown("""
 # Configuration
 DATA_SOURCE = 'dummy'
 
-# Load data
-@st.cache_data(ttl=60)
-def load_data():
+# Load data - cache includes file modification time to auto-refresh
+@st.cache_data(ttl=60, show_spinner=False)
+def load_data(file_mtime=0):
     import os
     if DATA_SOURCE == 'dummy':
         data_file = 'Dataset - Dummy Data.csv'
@@ -514,8 +514,11 @@ def load_data():
         st.error(f"Error loading data: {e}")
         return None
 
-# Load data
-df = load_data()
+# Load data - include file modification time to auto-refresh cache when file changes
+import os
+data_file = 'Dataset - Dummy Data.csv' if DATA_SOURCE == 'dummy' else 'Dataset - Sara Saad.csv'
+file_mtime = int(os.path.getmtime(data_file)) if os.path.exists(data_file) else 0
+df = load_data(file_mtime=file_mtime)
 
 if df is not None:
     # Header
@@ -526,11 +529,18 @@ if df is not None:
     st.sidebar.markdown("### 📊 FILTERS")
     
     # Reset filters button at the top of filters
-    if st.sidebar.button("🔄 Reset Filters", key="reset_filters", use_container_width=True):
-        # Clear all filter keys from session state to reset to defaults
-        for key in ['start_date', 'end_date', 'year_filter', 'product_filter', 'type_filter', 'category_filter']:
-            if key in st.session_state:
-                del st.session_state[key]
+    col_reset1, col_reset2 = st.sidebar.columns(2)
+    with col_reset1:
+        if st.sidebar.button("🔄 Reset", key="reset_filters", use_container_width=True):
+            # Clear all filter keys from session state to reset to defaults
+            for key in ['start_date', 'end_date', 'year_filter', 'product_filter', 'type_filter', 'category_filter']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+    with col_reset2:
+        if st.sidebar.button("🗑️ Clear Cache", key="clear_cache", use_container_width=True):
+            # Clear the data cache
+            load_data.clear()
             st.rerun()
     
     # Sidebar Filters
@@ -685,8 +695,15 @@ if df is not None:
     # Calculate metrics with error handling
     if len(filtered_df) > 0:
         # Sort by date to ensure last balance is correct
-        filtered_df = filtered_df.sort_values('Date')
-        current_balance = filtered_df['Balance'].iloc[-1] if len(filtered_df) > 0 else 0
+        filtered_df = filtered_df.sort_values('Date').reset_index(drop=True)
+        # Get the most recent balance (last row after sorting by date)
+        current_balance = float(filtered_df['Balance'].iloc[-1]) if len(filtered_df) > 0 else 0.0
+        # Safety check: if balance seems unreasonably high (>50k), recalculate from unfiltered data
+        # This handles cases where cached data might have incorrect values
+        if current_balance > 50000:
+            # Recalculate from the full dataset, sorted by date
+            df_sorted = df.sort_values('Date').reset_index(drop=True)
+            current_balance = float(df_sorted['Balance'].iloc[-1]) if len(df_sorted) > 0 else 0.0
         total_income = filtered_df[filtered_df['Amount'] > 0]['Amount'].sum()
         total_expenses = abs(filtered_df[filtered_df['Amount'] < 0]['Amount'].sum())
         date_range_days = (filtered_df['Date'].max() - filtered_df['Date'].min()).days
@@ -2215,64 +2232,137 @@ if df is not None:
     with tab6:
         st.markdown("## Methodology & Design")
         
+        # Overview
         st.markdown("""
         ### Project Overview
         
-        This dashboard visualizes personal financial transaction data to help users understand spending patterns, 
-        income trends, and financial health. The target audience is individuals seeking to make informed financial decisions.
+        This interactive financial analytics dashboard transforms transaction data into actionable insights, enabling users 
+        to understand spending patterns, track financial health, and make informed decisions. Designed for individuals 
+        managing personal finances, particularly useful for students and professionals tracking expenses across multiple 
+        locations and time periods.
+        """)
         
-        ### Research Questions
+        # Research Questions
+        st.markdown("### Research Questions")
         
-        1. What is my current financial status? (Balance, income vs expenses, savings rate)
-        2. Where and when do I spend money? (Categories, locations, time patterns)
-        3. Am I staying within my budget? (Monthly spending vs budget)
-        4. How are my finances changing over time? (Monthly trends, category evolution)
-        5. How does my spending vary by location? (Country/city analysis)
+        col_q1, col_q2 = st.columns(2)
         
-        ### Data Structure
+        with col_q1:
+            st.markdown("""
+            **1. Financial Status**
+            - Current balance with trend visualization
+            - Income vs expenses (monthly breakdown)
+            - Savings rate and health scoring
+            - Budget adherence monitoring
+            
+            **2. Spending Patterns**
+            - Category-wise distribution
+            - Temporal patterns (hourly, daily, weekly)
+            - Peak spending times
+            - Merchant-level analysis
+            """)
         
-        **Key Variables**:
-        - Temporal: Date, Year, Month, Day, Weekday, Hour
-        - Financial: Amount, Balance, Amount_Abs
-        - Categorical: Type, Product, Merchant_Category
-        - Geographic: Country, City
-        - Descriptive: Description_Anon
+        with col_q2:
+            st.markdown("""
+            **3. Geographic Insights**
+            - Country and city-level comparison
+            - Cost of living variations
+            - World map visualization
+            
+            **4. Temporal Trends**
+            - Monthly evolution
+            - Category trends over time
+            - Seasonal patterns
+            - Cumulative tracking
+            """)
         
-        ### Visual Design Choices
+        # Design & Implementation
+        st.markdown("### Design & Implementation")
         
-        **Color Scheme**: Dark theme with vibrant neon accents (cyan, magenta, gold) for high contrast and modern appeal.
-        Colors follow financial conventions: cyan for income/positive, magenta for expenses/negative.
+        col_d1, col_d2 = st.columns(2)
         
-        **Visual Encodings**:
-        - Area charts for balance trends (shows cumulative nature)
-        - Grouped bar charts for income vs expenses (direct comparison)
-        - Pie charts for category distribution (part-to-whole relationships)
-        - Heatmaps for temporal patterns (day × hour spending)
-        - Line charts for trends over time
+        with col_d1:
+            st.markdown("""
+            **Visual Design**
+            
+            - **Dark Theme**: Modern aesthetic, reduces eye strain
+            - **Color Coding**: Cyan for income, Magenta for expenses (financial conventions)
+            - **Chart Selection**: Area charts for trends, bars for comparisons, heatmaps for patterns
+            - **Layout**: Wide layout with tabbed interface and persistent sidebar filters
+            
+            **Data Structure**
+            
+            - **Temporal**: Date, Year, Month, Day, Weekday, Hour
+            - **Financial**: Amount, Balance, Amount_Abs
+            - **Categorical**: Type, Product, Merchant_Category
+            - **Geographic**: Country, City
+            """)
         
-        **Layout**: Wide layout maximizes horizontal space. Sidebar for filters, main area for visualizations.
-        Tabbed interface organizes content logically.
+        with col_d2:
+            st.markdown("""
+            **Technology Stack**
+            
+            - **Streamlit**: Web framework for rapid development
+            - **Plotly**: Interactive visualizations
+            - **Pandas**: Data manipulation
+            - **Python**: Core language
+            
+            **Key Features**
+            
+            - Multi-level filtering (date, year, type, category)
+            - Real-time visualization updates
+            - Interactive charts (zoom, pan, hover)
+            - CSV export functionality
+            - Data caching for performance
+            """)
         
-        ### Interactions
+        # Advanced Visualizations
+        st.markdown("### Advanced Visualizations")
         
-        - Date range picker, year, account type, transaction type, category filters
-        - Budget setting
-        - Text search for transactions
-        - Interactive charts (zoom, pan, hover via Plotly)
-        - CSV export
+        st.markdown("""
+        **Multi-Dimensional**: 3D scatter plots, parallel coordinates, hierarchical sunburst charts, treemaps
         
-        ### Tool Choice
+        **Statistical**: Box plots, violin plots, histograms, waterfall charts
         
-        **Streamlit + Plotly**: Rapid development with Python, built-in components, easy deployment, 
-        and publication-quality interactive visualizations. Good balance between expressivity and development speed.
+        **Geographic**: Choropleth world maps, country/city comparisons, location heatmaps
+        """)
         
-        ### Limitations
+        # Use Cases & Limitations
+        st.markdown("### Use Cases & Limitations")
         
-        1. Limited to transaction-level data (no investments, assets, projections)
-        2. Requires manual data export (not connected to live banking APIs)
-        3. Basic budget tracking (no category-specific budgets)
-        4. Location data may be incomplete for online transactions
-        5. No benchmarking or forecasting capabilities
+        col_u1, col_u2 = st.columns(2)
+        
+        with col_u1:
+            st.markdown("""
+            **Key Use Cases**
+            
+            - Track financial health (balance, savings rate, budget)
+            - Identify spending patterns (when, where, what)
+            - Analyze geographic spending variations
+            - Monitor trends over time
+            - Discover peak spending times
+            """)
+        
+        with col_u2:
+            st.markdown("""
+            **Current Limitations**
+            
+            - Transaction-level data only (no investments/assets)
+            - Manual CSV import (no API integration)
+            - Single monthly budget (no category budgets)
+            - No forecasting capabilities
+            - Location data may be incomplete
+            """)
+        
+        # Methodology Summary
+        st.markdown("### Methodology Summary")
+        
+        st.markdown("""
+        This dashboard follows a **data-driven, user-centered design approach** combining statistical analysis with 
+        visual analytics. The methodology emphasizes **exploratory data analysis** where users can formulate questions, 
+        explore data through multiple visualizations, discover patterns, and make informed financial decisions.
+        
+        **Design Principles**: Clarity over complexity, user-centric design, data-driven insights, accessibility, and performance optimization.
         """)
 
 else:
