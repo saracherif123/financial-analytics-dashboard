@@ -3,50 +3,466 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from datetime import datetime, timedelta
 
 # Page configuration
 st.set_page_config(
-    page_title="Financial Dashboard",
-    page_icon="💰",
+    page_title="Financial Analytics Dashboard",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Modern Dark Theme CSS with Vibrant Accents
 st.markdown("""
     <style>
+    /* Ensure sidebar is always accessible */
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+    }
+    
+    /* Sidebar toggle button always visible */
+    [data-testid="stSidebar"] [data-testid="collapsedControl"] {
+        display: block !important;
+    }
+    
+    /* Reset button styling - smaller and black text - more specific */
+    [data-testid="stSidebar"] button {
+        font-size: 0.65rem !important;
+    }
+    
+    [data-testid="stSidebar"] button > div,
+    [data-testid="stSidebar"] button > div > p,
+    [data-testid="stSidebar"] button > div > span {
+        color: #000000 !important;
+        font-weight: 500 !important;
+        font-size: 0.65rem !important;
+    }
+    
+    [data-testid="stSidebar"] button:hover > div,
+    [data-testid="stSidebar"] button:hover > div > p,
+    [data-testid="stSidebar"] button:hover > div > span {
+        color: #000000 !important;
+    }
+    
+    /* Force black text on all button content */
+    [data-testid="stSidebar"] button * {
+        color: #000000 !important;
+    }
+    
+    /* Reset button styling - smaller text and black */
+    [data-testid="stSidebar"] button {
+        font-size: 0.65rem !important;
+    }
+    
+    /* Force black text on button - override white text rule */
+    [data-testid="stSidebar"] button,
+    [data-testid="stSidebar"] button > div,
+    [data-testid="stSidebar"] button > div > p,
+    [data-testid="stSidebar"] button > div > span,
+    [data-testid="stSidebar"] button > div > div {
+        color: #000000 !important;
+        font-size: 0.65rem !important;
+    }
+    
+    [data-testid="stSidebar"] button:hover,
+    [data-testid="stSidebar"] button:hover > div,
+    [data-testid="stSidebar"] button:hover > div > p,
+    [data-testid="stSidebar"] button:hover > div > span {
+        color: #000000 !important;
+    }
+    
+    /* Override any white text rules for buttons */
+    [data-testid="stSidebar"] button * {
+        color: #000000 !important;
+    }
+    
+    /* Improve sidebar styling */
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 2rem;
+    }
+    
+    /* Better filter spacing */
+    [data-testid="stSidebar"] .stSelectbox,
+    [data-testid="stSidebar"] .stDateInput,
+    [data-testid="stSidebar"] .stNumberInput {
+        margin-bottom: 1rem;
+    }
+    
+    /* Original styles */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    /* Main Container */
+    .stApp {
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        color: #ffffff;
+    }
+    
+    /* Header */
     .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 50%, #ffd700 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        letter-spacing: -1px;
+        text-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
     }
+    
     .subtitle {
         text-align: center;
-        color: #666;
-        font-size: 1.2rem;
+        color: #a0a0a0;
+        font-size: 1.1rem;
         margin-bottom: 2rem;
+        font-weight: 300;
     }
-    .positive {
-        color: #10b981;
+    
+    /* Metric Cards - Glassmorphism */
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .negative {
-        color: #ef4444;
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 245, 255, 0.2);
+    }
+    
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .metric-label {
+        font-size: 0.75rem;
+        color: #a0a0a0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-weight: 600;
+    }
+    
+    /* Section Headers */
+    h2 {
+        color: #00f5ff;
+        font-weight: 700;
+        font-size: 1.8rem;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+    }
+    
+    h3 {
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 1.3rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Sidebar - Ensure it's visible and scrollable */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 12, 41, 0.95) !important;
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Make sidebar scrollable - target the content area */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        max-height: calc(100vh - 3rem) !important;
+        padding-bottom: 2rem !important;
+    }
+    
+    /* Ensure sidebar content can scroll */
+    section[data-testid="stSidebar"] {
+        overflow: visible !important;
+    }
+    
+    section[data-testid="stSidebar"] > div {
+        overflow-y: auto !important;
+        max-height: 100vh !important;
+    }
+    
+    /* Sidebar toggle button - make it more visible */
+    [data-testid="collapsedControl"] {
+        background: rgba(0, 245, 255, 0.2) !important;
+        border: 1px solid rgba(0, 245, 255, 0.5) !important;
+    }
+    
+    [data-testid="collapsedControl"]:hover {
+        background: rgba(0, 245, 255, 0.3) !important;
+    }
+    
+    /* Sidebar toggle button icon/arrow - white - use filter */
+    [data-testid="collapsedControl"] svg {
+        filter: brightness(0) invert(1) !important;
+        color: #ffffff !important;
+    }
+    
+    /* Also target all SVG elements */
+    [data-testid="collapsedControl"] svg *,
+    [data-testid="collapsedControl"] svg path,
+    [data-testid="collapsedControl"] svg circle,
+    [data-testid="collapsedControl"] svg line,
+    [data-testid="collapsedControl"] svg polyline,
+    [data-testid="collapsedControl"] svg g {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    /* Force white on all child elements */
+    [data-testid="collapsedControl"] * {
+        color: #ffffff !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px;
+        border-radius: 12px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #a0a0a0;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 100%);
+        color: #000000;
+        font-weight: 700;
+    }
+    
+    /* Sidebar - Reduce spacing between elements - more aggressive */
+    [data-testid="stSidebar"] h3 {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    [data-testid="stSidebar"] h2 {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    [data-testid="stSidebar"] hr {
+        margin: 0.25rem 0 !important;
+    }
+    
+    [data-testid="stSidebar"] p {
+        margin: 0.1rem 0 !important;
+    }
+    
+    [data-testid="stSidebar"] .stSelectbox,
+    [data-testid="stSidebar"] .stNumberInput,
+    [data-testid="stSidebar"] .stDateInput,
+    [data-testid="stSidebar"] .stButton {
+        margin-top: 0.1rem !important;
+        margin-bottom: 0.1rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stSelectbox > div,
+    [data-testid="stSidebar"] .stNumberInput > div,
+    [data-testid="stSidebar"] .stDateInput > div,
+    [data-testid="stSidebar"] .stButton > div {
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+    }
+    
+    [data-testid="stSidebar"] .element-container {
+        margin-top: 0.1rem !important;
+        margin-bottom: 0.1rem !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    
+    /* Reduce spacing for markdown elements in sidebar */
+    [data-testid="stSidebar"] .stMarkdown {
+        margin-top: 0.1rem !important;
+        margin-bottom: 0.1rem !important;
+    }
+    
+    [data-testid="stSidebar"] .stMarkdown p {
+        margin: 0.05rem 0 !important;
+    }
+    
+    /* Reduce spacing in vertical blocks */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > [data-testid="element-container"] {
+        margin-bottom: 0.1rem !important;
+        padding-bottom: 0 !important;
+    }
+    
+    /* Reduce spacing between columns */
+    [data-testid="stSidebar"] [data-testid="column"] {
+        padding: 0.1rem !important;
+    }
+    
+    /* Sidebar - Labels and text white, but input values black */
+    [data-testid="stSidebar"] .stSelectbox label,
+    [data-testid="stSidebar"] .stNumberInput label,
+    [data-testid="stSidebar"] .stDateInput label,
+    [data-testid="stSidebar"] p:not(button p),
+    [data-testid="stSidebar"] strong,
+    [data-testid="stSidebar"] label:not(button label),
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h2 {
+        color: #ffffff !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Buttons in sidebar should have black text - override white text */
+    [data-testid="stSidebar"] button,
+    [data-testid="stSidebar"] button * {
+        color: #000000 !important;
+    }
+    
+    /* Date input field values - black for readability */
+    [data-testid="stSidebar"] .stDateInput input,
+    [data-testid="stSidebar"] .stDateInput [data-baseweb="input"],
+    [data-testid="stSidebar"] .stDateInput [data-baseweb="input"] input {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Number input field values - black for readability */
+    [data-testid="stSidebar"] .stNumberInput input,
+    [data-testid="stSidebar"] .stNumberInput [data-baseweb="input"],
+    [data-testid="stSidebar"] .stNumberInput [data-baseweb="input"] input {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Selectbox selected value - black for readability */
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div,
+    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div > div {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Sidebar selectbox dropdown text */
+    [data-baseweb="popover"] [data-baseweb="select"] {
+        color: #000000 !important;
+    }
+    
+    /* Dataframes */
+    .dataframe {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+    }
+    
+    /* Hide Streamlit branding but keep sidebar toggle visible */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Keep header visible but minimal - needed for sidebar toggle */
+    header {
+        visibility: visible !important;
+        height: 3rem !important;
+    }
+    
+    /* Make sidebar toggle button very visible */
+    [data-testid="collapsedControl"] {
+        visibility: visible !important;
+        display: block !important;
+        background: rgba(0, 245, 255, 0.2) !important;
+        border: 2px solid rgba(0, 245, 255, 0.6) !important;
+        border-radius: 8px !important;
+        padding: 8px !important;
+        margin: 8px !important;
+    }
+    
+    [data-testid="collapsedControl"]:hover {
+        background: rgba(0, 245, 255, 0.4) !important;
+        border-color: rgba(0, 245, 255, 1) !important;
+    }
+    
+    /* Sidebar toggle button icon/arrow - white - use filter */
+    [data-testid="collapsedControl"] svg {
+        filter: brightness(0) invert(1) !important;
+        color: #ffffff !important;
+    }
+    
+    /* Also target all SVG elements */
+    [data-testid="collapsedControl"] svg *,
+    [data-testid="collapsedControl"] svg path,
+    [data-testid="collapsedControl"] svg circle,
+    [data-testid="collapsedControl"] svg line,
+    [data-testid="collapsedControl"] svg polyline,
+    [data-testid="collapsedControl"] svg g {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    /* Force white on all child elements */
+    [data-testid="collapsedControl"] * {
+        color: #ffffff !important;
+    }
+    
+    /* Sidebar visibility */
+    [data-testid="stSidebar"] {
+        visibility: visible !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 100%);
+        border-radius: 5px;
+    }
+    
+    /* Info boxes */
+    .stInfo {
+        background: rgba(0, 245, 255, 0.1);
+        border-left: 4px solid #00f5ff;
+    }
+    
+    /* Divider */
+    hr {
+        border-color: rgba(255, 255, 255, 0.1);
+        margin: 2rem 0;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Configuration: Set to 'real' or 'dummy' to switch datasets
-# For public deployment, use 'dummy' to protect privacy
-DATA_SOURCE = 'dummy'  # Change to 'real' for your actual data
+# Configuration
+DATA_SOURCE = 'dummy'
 
 # Load data
-@st.cache_data
+@st.cache_data(ttl=60)
 def load_data():
-    # Select data file based on configuration
+    import os
     if DATA_SOURCE == 'dummy':
         data_file = 'Dataset - Dummy Data.csv'
     else:
@@ -54,20 +470,23 @@ def load_data():
     
     try:
         df = pd.read_csv(data_file)
-        # Convert date columns to datetime
         df['Date'] = pd.to_datetime(df[['Year', 'Month', 'Day']])
-        # Ensure Amount is numeric
         df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
         df['Balance'] = pd.to_numeric(df['Balance'], errors='coerce')
         df['Amount_Abs'] = pd.to_numeric(df['Amount_Abs'], errors='coerce')
-        # Add Country and City columns if they don't exist (for backward compatibility)
+        
+        # Ensure Weekday and Hour columns exist (create from Date if missing)
+        if 'Weekday' not in df.columns:
+            df['Weekday'] = df['Date'].dt.day_name()
+        if 'Hour' not in df.columns:
+            df['Hour'] = df['Date'].dt.hour
+        
         if 'Country' not in df.columns:
             df['Country'] = 'Unknown'
         if 'City' not in df.columns:
             df['City'] = 'Unknown'
         return df
     except FileNotFoundError:
-        # Try fallback to other file
         try:
             fallback_file = 'Dataset - Dummy Data.csv' if DATA_SOURCE == 'real' else 'Dataset - Sara Saad.csv'
             df = pd.read_csv(fallback_file)
@@ -75,15 +494,21 @@ def load_data():
             df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce')
             df['Balance'] = pd.to_numeric(df['Balance'], errors='coerce')
             df['Amount_Abs'] = pd.to_numeric(df['Amount_Abs'], errors='coerce')
-            # Add Country and City columns if they don't exist (for backward compatibility)
+            
+            # Ensure Weekday and Hour columns exist (create from Date if missing)
+            if 'Weekday' not in df.columns:
+                df['Weekday'] = df['Date'].dt.day_name()
+            if 'Hour' not in df.columns:
+                df['Hour'] = df['Date'].dt.hour
+            
             if 'Country' not in df.columns:
                 df['Country'] = 'Unknown'
             if 'City' not in df.columns:
                 df['City'] = 'Unknown'
-            st.info(f"⚠️ Using fallback data file: {fallback_file}")
+            st.info("Using fallback data file")
             return df
         except Exception as e2:
-            st.error(f"Error: Could not find data file. Please ensure '{data_file}' or '{fallback_file}' exists.")
+            st.error("Error: Could not find data file.")
             return None
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -94,564 +519,825 @@ df = load_data()
 
 if df is not None:
     # Header
-    st.markdown('<h1 class="main-header">💰 Financial Dashboard</h1>', unsafe_allow_html=True)
-    data_source_badge = "🔒 Dummy Data" if DATA_SOURCE == 'dummy' else "📊 Real Data"
-    st.markdown(f'<p class="subtitle">Interactive Transaction Analytics & Insights | {data_source_badge}</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">Financial Analytics Dashboard</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Interactive Transaction Analytics & Insights</p>', unsafe_allow_html=True)
     
-    # Sidebar filters
-    st.sidebar.header("🔍 Filters")
+    # Sidebar Filters
+    st.sidebar.markdown("### 📊 FILTERS")
     
-    # Year filter
-    years = ['All'] + sorted(df['Year'].unique().tolist())
-    selected_year = st.sidebar.selectbox("Select Year", years)
+    # Reset filters button at the top of filters
+    if st.sidebar.button("🔄 Reset Filters", key="reset_filters", use_container_width=True):
+        # Clear all filter keys from session state to reset to defaults
+        for key in ['start_date', 'end_date', 'year_filter', 'product_filter', 'type_filter', 'category_filter']:
+            if key in st.session_state:
+                del st.session_state[key]
+            st.rerun()
     
-    # Product filter
-    products = ['All'] + sorted(df['Product'].unique().tolist())
-    selected_product = st.sidebar.selectbox("Select Product", products)
+    # Sidebar Filters
+    st.sidebar.markdown("### 📊 FILTERS")
     
-    # Transaction type filter
-    types = ['All'] + sorted(df['Type'].unique().tolist())
-    selected_type = st.sidebar.selectbox("Select Transaction Type", types)
+    # Date Range - Improved handling
+    min_date = df['Date'].min().date()
+    max_date = df['Date'].max().date()
     
-    # Apply filters
+    st.sidebar.markdown("**Date Range**")
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=min_date,
+            min_value=min_date,
+            max_value=max_date,
+            key="start_date",
+            label_visibility="collapsed"
+        )
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=max_date,
+            min_value=min_date,
+            max_value=max_date,
+            key="end_date",
+            label_visibility="collapsed"
+        )
+    
+    # Ensure start_date <= end_date
+    if start_date > end_date:
+        st.sidebar.warning("Start date must be before end date. Adjusting...")
+        start_date, end_date = min_date, max_date
+    
+    # Apply date range filter first to get available options for other filters
+    date_filtered_df = df[
+        (df['Date'].dt.date >= start_date) & 
+        (df['Date'].dt.date <= end_date)
+    ].copy()
+    
+    # Year filter - populate from date-filtered data
+    st.sidebar.markdown("**Year**")
+    if len(date_filtered_df) > 0:
+        years = ['All'] + sorted(date_filtered_df['Year'].unique().tolist())
+    else:
+        years = ['All'] + sorted(df['Year'].unique().tolist())
+    
+    # Get current selection or default to 'All'
+    current_year = st.session_state.get('year_filter', 'All')
+    if current_year not in years:
+        current_year = 'All'
+    
+    selected_year = st.sidebar.selectbox(
+        "Select Year",
+        years,
+        index=years.index(current_year),
+        key="year_filter",
+        label_visibility="collapsed"
+    )
+    
+    # Account Type filter - populate from date-filtered data
+    st.sidebar.markdown("**Account Type**")
+    if len(date_filtered_df) > 0:
+        products = ['All'] + sorted(date_filtered_df['Product'].unique().tolist())
+    else:
+        products = ['All'] + sorted(df['Product'].unique().tolist())
+    
+    # Get current selection or default to 'All'
+    current_product = st.session_state.get('product_filter', 'All')
+    if current_product not in products:
+        current_product = 'All'
+    
+    selected_product = st.sidebar.selectbox(
+        "Select Account Type",
+        products,
+        index=products.index(current_product),
+        key="product_filter",
+        label_visibility="collapsed",
+        help="Current, Savings, or Deposit account"
+    )
+    
+    # Transaction Type filter - populate from date-filtered data
+    st.sidebar.markdown("**Transaction Type**")
+    if len(date_filtered_df) > 0:
+        types = ['All'] + sorted(date_filtered_df['Type'].unique().tolist())
+    else:
+        types = ['All'] + sorted(df['Type'].unique().tolist())
+    
+    # Get current selection or default to 'All'
+    current_type = st.session_state.get('type_filter', 'All')
+    if current_type not in types:
+        current_type = 'All'
+    
+    selected_type = st.sidebar.selectbox(
+        "Select Transaction Type",
+        types,
+        index=types.index(current_type),
+        key="type_filter",
+        label_visibility="collapsed"
+    )
+    
+    # Category filter - populate from date-filtered data
+    st.sidebar.markdown("**Category**")
+    if len(date_filtered_df) > 0:
+        categories = ['All'] + sorted(date_filtered_df['Merchant_Category'].unique().tolist())
+    else:
+        categories = ['All'] + sorted(df['Merchant_Category'].unique().tolist())
+    
+    # Get current selection or default to 'All'
+    current_category = st.session_state.get('category_filter', 'All')
+    if current_category not in categories:
+        current_category = 'All'
+    
+    selected_category = st.sidebar.selectbox(
+        "Select Category",
+        categories,
+        index=categories.index(current_category),
+        key="category_filter",
+        label_visibility="collapsed"
+    )
+    
+    # Budget variable (for use in dashboard, but not shown in sidebar)
+    monthly_budget = 1000
+    
+    # Apply all filters sequentially
     filtered_df = df.copy()
+    
+    if len(filtered_df) > 0:
+        # Date range filter
+        filtered_df = filtered_df[
+            (filtered_df['Date'].dt.date >= start_date) & 
+            (filtered_df['Date'].dt.date <= end_date)
+        ]
+        
+        # Year filter
     if selected_year != 'All':
         filtered_df = filtered_df[filtered_df['Year'] == selected_year]
+        
+        # Account Type filter
     if selected_product != 'All':
         filtered_df = filtered_df[filtered_df['Product'] == selected_product]
+        
+        # Transaction Type filter
     if selected_type != 'All':
         filtered_df = filtered_df[filtered_df['Type'] == selected_type]
     
-    # Calculate metrics
-    current_balance = filtered_df['Balance'].iloc[-1] if len(filtered_df) > 0 else 0
-    total_income = filtered_df[filtered_df['Amount'] > 0]['Amount'].sum()
-    total_expenses = abs(filtered_df[filtered_df['Amount'] < 0]['Amount'].sum())
+        # Category filter
+        if selected_category != 'All':
+            filtered_df = filtered_df[filtered_df['Merchant_Category'] == selected_category]
+    
+    # Calculate metrics with error handling
+    if len(filtered_df) > 0:
+        # Sort by date to ensure last balance is correct
+        filtered_df = filtered_df.sort_values('Date')
+        current_balance = filtered_df['Balance'].iloc[-1] if len(filtered_df) > 0 else 0
+        total_income = filtered_df[filtered_df['Amount'] > 0]['Amount'].sum()
+        total_expenses = abs(filtered_df[filtered_df['Amount'] < 0]['Amount'].sum())
+        date_range_days = (filtered_df['Date'].max() - filtered_df['Date'].min()).days
+    else:
+        current_balance = 0
+        total_income = 0
+        total_expenses = 0
+        date_range_days = 1
+    
     net_flow = total_income - total_expenses
-    expenses_df = filtered_df[filtered_df['Amount'] < 0].copy()
-    income_df = filtered_df[filtered_df['Amount'] > 0].copy()
+    expenses_df = filtered_df[filtered_df['Amount'] < 0].copy() if len(filtered_df) > 0 else pd.DataFrame()
+    income_df = filtered_df[filtered_df['Amount'] > 0].copy() if len(filtered_df) > 0 else pd.DataFrame()
     
-    # Additional metrics
-    avg_daily_spending = total_expenses / max(len(filtered_df['Date'].unique()), 1) if len(filtered_df) > 0 else 0
+    # Date range calculations
+    date_range_months = date_range_days / 30.44 if date_range_days > 0 else 1
+    
+    # Monthly calculations
+    # Monthly income is fixed at €1000 (monthly stipend)
+    avg_monthly_income = 1000.0
+    
+    avg_monthly_expenses = total_expenses / max(date_range_months, 1)
     savings_rate = ((total_income - total_expenses) / total_income * 100) if total_income > 0 else 0
-    num_transactions = len(filtered_df)
-    avg_transaction = filtered_df['Amount_Abs'].mean()
     
-    # Calculate monthly summary (used across multiple tabs)
-    monthly_df = filtered_df.copy()
-    monthly_df['YearMonth'] = monthly_df['Date'].dt.to_period('M').astype(str)
-    income_monthly = monthly_df[monthly_df['Amount'] > 0].groupby('YearMonth')['Amount'].sum().reset_index()
-    income_monthly.columns = ['Month', 'Income']
-    expenses_monthly = monthly_df[monthly_df['Amount'] < 0].groupby('YearMonth')['Amount_Abs'].sum().reset_index()
-    expenses_monthly.columns = ['Month', 'Expenses']
-    monthly_summary = pd.merge(income_monthly, expenses_monthly, on='Month', how='outer').fillna(0)
-    monthly_summary = monthly_summary.sort_values('Month')
-    monthly_summary['Net'] = monthly_summary['Income'] - monthly_summary['Expenses']
+    # Budget calculations - use the most recent month in filtered data, not the actual current month
+    if len(expenses_df) > 0:
+        # Get the most recent month from the filtered data
+        expenses_df_sorted = expenses_df.sort_values('Date')
+        most_recent_date = expenses_df_sorted['Date'].iloc[-1]
+        current_month = most_recent_date.strftime('%Y-%m')
+        current_month_expenses = expenses_df[expenses_df['Date'].dt.to_period('M').astype(str) == current_month]['Amount_Abs'].sum()
+    else:
+        current_month = datetime.now().strftime('%Y-%m')
+        current_month_expenses = 0
+    budget_used_pct = (current_month_expenses / monthly_budget * 100) if monthly_budget > 0 else 0
+    budget_remaining = monthly_budget - current_month_expenses
+    
+    # Key Metrics - Modern Card Layout
+    st.markdown("## FINANCIAL OVERVIEW")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card" style="border-left: 4px solid #00f5ff;">
+            <div class="metric-label">Current Balance</div>
+            <div class="metric-value">€{current_balance:,.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card" style="border-left: 4px solid #00f5ff;">
+            <div class="metric-label">Monthly Income</div>
+            <div class="metric-value">€{avg_monthly_income:,.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+            <div class="metric-label">Monthly Expenses</div>
+            <div class="metric-value">€{avg_monthly_expenses:,.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        net_color = "#00f5ff" if net_flow >= 0 else "#ff00ff"
+        st.markdown(f"""
+        <div class="metric-card" style="border-left: 4px solid {net_color};">
+            <div class="metric-label">Net Flow</div>
+            <div class="metric-value">€{net_flow:,.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Budget Progress & Savings Rate
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### Monthly Budget")
+        budget_color = "#00f5ff" if budget_used_pct < 80 else "#ffd700" if budget_used_pct < 100 else "#ff00ff"
+        st.markdown(f"""
+        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="color: #a0a0a0;">Spent this month</span>
+                <span style="font-weight: 700; color: {budget_color};">€{current_month_expenses:,.2f} / €{monthly_budget:,.2f}</span>
+            </div>
+            <div style="height: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; overflow: hidden;">
+                <div style="height: 100%; width: {min(budget_used_pct, 100)}%; background: linear-gradient(90deg, {budget_color} 0%, {budget_color}80 100%); transition: width 0.3s;"></div>
+            </div>
+            <div style="margin-top: 0.5rem; color: #a0a0a0; font-size: 0.875rem;">
+                {budget_used_pct:.1f}% used • €{max(budget_remaining, 0):,.2f} remaining
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("### Savings Rate")
+        savings_color = "#00f5ff" if savings_rate >= 20 else "#ffd700" if savings_rate >= 0 else "#ff00ff"
+        st.markdown(f"""
+        <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
+            <div style="font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, {savings_color} 0%, {savings_color}80 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 1rem 0;">
+                {savings_rate:.1f}%
+            </div>
+            <div style="color: #a0a0a0; font-size: 0.875rem;">
+                {'Excellent' if savings_rate >= 20 else 'Good' if savings_rate >= 0 else 'Needs improvement'}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # Main Tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Dashboard", 
+        "Spending Analysis", 
+        "Trends", 
+        "Locations", 
+        "Transactions",
+        "Methodology"
+    ])
     
     # Weekday mapping for visualizations
     weekday_map = {'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 
                    'Friday': 5, 'Saturday': 6, 'Sunday': 7}
     
-    # Display key metrics
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    # Calculate monthly summary
+    if len(filtered_df) > 0:
+        monthly_df = filtered_df.copy()
+        monthly_df['YearMonth'] = monthly_df['Date'].dt.to_period('M').astype(str)
+        income_monthly = monthly_df[monthly_df['Amount'] > 0].groupby('YearMonth')['Amount'].sum().reset_index()
+        income_monthly.columns = ['Month', 'Income']
+        expenses_monthly = monthly_df[monthly_df['Amount'] < 0].groupby('YearMonth')['Amount_Abs'].sum().reset_index()
+        expenses_monthly.columns = ['Month', 'Expenses']
+        monthly_summary = pd.merge(income_monthly, expenses_monthly, on='Month', how='outer').fillna(0)
+        monthly_summary = monthly_summary.sort_values('Month')
+        monthly_summary['Net'] = monthly_summary['Income'] - monthly_summary['Expenses']
+    else:
+        monthly_summary = pd.DataFrame(columns=['Month', 'Income', 'Expenses', 'Net'])
     
-    with col1:
-        st.metric("Current Balance", f"€{current_balance:,.2f}")
+    # Color palette - vibrant neon colors
+    colors = {
+        'primary': '#00f5ff',
+        'secondary': '#ff00ff',
+        'accent': '#ffd700',
+        'income': '#00f5ff',
+        'expense': '#ff00ff',
+        'positive': '#00f5ff',
+        'negative': '#ff00ff'
+    }
     
-    with col2:
-        st.metric("Total Income", f"€{total_income:,.2f}")
-    
-    with col3:
-        st.metric("Total Expenses", f"€{total_expenses:,.2f}")
-    
-    with col4:
-        delta_color = "normal" if net_flow >= 0 else "inverse"
-        st.metric("Net Flow", f"€{net_flow:,.2f}", delta=f"€{net_flow:,.2f}", delta_color=delta_color)
-    
-    with col5:
-        st.metric("Savings Rate", f"{savings_rate:.1f}%")
-    
-    with col6:
-        st.metric("Avg Daily Spending", f"€{avg_daily_spending:,.2f}")
-    
-    st.divider()
-    
-    # Key Insights Section
-    st.subheader("💡 Key Insights")
-    insight_col1, insight_col2, insight_col3 = st.columns(3)
-    
-    with insight_col1:
-        if len(expenses_df) > 0:
-            top_category = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().idxmax()
-            top_category_amount = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().max()
-            st.info(f"**Top Spending Category**: {top_category}\n\n**Amount**: €{top_category_amount:,.2f}")
-    
-    with insight_col2:
-        if len(filtered_df) > 0:
-            date_range = (filtered_df['Date'].max() - filtered_df['Date'].min()).days
-            transactions_per_day = num_transactions / max(date_range, 1)
-            st.info(f"**Transaction Frequency**: {transactions_per_day:.1f} transactions/day\n\n**Period**: {date_range} days")
-    
-    with insight_col3:
-        if len(expenses_df) > 0:
-            peak_hour = expenses_df.groupby('Hour')['Amount_Abs'].sum().idxmax()
-            peak_hour_amount = expenses_df.groupby('Hour')['Amount_Abs'].sum().max()
-            st.info(f"**Peak Spending Hour**: {peak_hour}:00\n\n**Amount**: €{peak_hour_amount:,.2f}")
-    
-    st.divider()
-    
-    # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Overview", "💰 Spending Analysis", "📈 Trends", "🌍 Country Comparison", "🔍 Deep Dive", "🎨 Advanced Visuals", "🗺️ World Map"])
+    # Vibrant color palette for charts
+    vibrant_colors = px.colors.qualitative.Vivid + px.colors.qualitative.Set3
     
     with tab1:
-        # Overview Tab
-        col1, col2 = st.columns(2)
+        st.markdown("## Financial Dashboard")
+        
+        # Balance Over Time and Top Categories - Side by Side
+        col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.subheader("📈 Balance Over Time")
-            balance_df = filtered_df.groupby('Date')['Balance'].last().reset_index()
-            balance_df = balance_df.sort_values('Date')
-            fig_balance = px.line(
-                balance_df, 
-                x='Date', 
-                y='Balance',
-                title="Account Balance Over Time",
-                labels={'Balance': 'Balance (€)', 'Date': 'Date'},
-                color_discrete_sequence=['#667eea']
-            )
-            fig_balance.add_hline(y=current_balance, line_dash="dash", line_color="red", 
-                                 annotation_text=f"Current: €{current_balance:,.2f}")
-            fig_balance.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_balance, use_container_width=True)
-            
-            st.subheader("📊 Expenses by Category")
-            if len(expenses_df) > 0:
-                category_expenses = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
-                category_expenses = category_expenses.sort_values('Amount_Abs', ascending=False).head(10)
-                fig_category = px.pie(
-                    category_expenses,
-                    values='Amount_Abs',
-                    names='Merchant_Category',
-                    title="Top 10 Expense Categories",
-                    color_discrete_sequence=px.colors.qualitative.Set3
-                )
-                fig_category.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig_category, use_container_width=True)
+            st.markdown("### Account Balance Trend")
+            if len(filtered_df) > 0:
+                balance_df = filtered_df.groupby('Date')['Balance'].last().reset_index().sort_values('Date')
             else:
-                st.info("No expense data available for selected filters.")
+                balance_df = pd.DataFrame(columns=['Date', 'Balance'])
+            if len(balance_df) > 0:
+                fig_balance = px.area(
+                    balance_df,
+                    x='Date',
+                    y='Balance',
+                    title="",
+                    labels={'Balance': 'Balance (€)', 'Date': 'Date'},
+                    color_discrete_sequence=[colors['primary']]
+                )
+                fig_balance.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
+                    hovermode='x unified',
+                    height=400,
+                    showlegend=False,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                    yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                )
+                fig_balance.add_hline(y=current_balance, line_dash="dash", line_color=colors['secondary'], 
+                                     annotation_text=f"Current: €{current_balance:,.0f}")
+                st.plotly_chart(fig_balance, use_container_width=True, key="balance_trend")
+            else:
+                st.info("No data available for the selected filters.")
         
         with col2:
-            st.subheader("💸 Monthly Income vs Expenses")
-            
+            st.markdown("### Top Spending Categories")
+            if len(expenses_df) > 0:
+                top_cats = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
+                top_cats = top_cats.sort_values('Amount_Abs', ascending=False).head(5)
+                top_cats['Percentage'] = (top_cats['Amount_Abs'] / top_cats['Amount_Abs'].sum() * 100).round(1)
+                
+                fig_categories = px.bar(
+                    top_cats,
+                    x='Amount_Abs',
+                    y='Merchant_Category',
+                    orientation='h',
+                    title="",
+                    labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
+                    color='Amount_Abs',
+                    color_continuous_scale='Plasma',
+                    text='Amount_Abs'
+                )
+                fig_categories.update_traces(
+                    texttemplate='€%{text:,.0f}',
+                    textposition='outside',
+                    textfont_color='#ffffff'
+                )
+                fig_categories.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
+                    height=400,
+                    showlegend=False,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)', showgrid=True),
+                    yaxis=dict(gridcolor='rgba(255,255,255,0.1)', showgrid=False, categoryorder='total ascending')
+                )
+                st.plotly_chart(fig_categories, use_container_width=True, key="top_categories_bar")
+            else:
+                st.info("No expense data available.")
+        
+        # Income vs Expenses Chart
+        st.markdown("### Income vs Expenses")
+        if len(monthly_summary) > 0:
             fig_monthly = go.Figure()
             fig_monthly.add_trace(go.Bar(
                 x=monthly_summary['Month'],
                 y=monthly_summary['Income'],
                 name='Income',
-                marker_color='#10b981'
+                marker_color=colors['income']
             ))
             fig_monthly.add_trace(go.Bar(
                 x=monthly_summary['Month'],
                 y=monthly_summary['Expenses'],
                 name='Expenses',
-                marker_color='#ef4444'
+                marker_color=colors['expense']
             ))
             fig_monthly.add_trace(go.Scatter(
                 x=monthly_summary['Month'],
                 y=monthly_summary['Net'],
                 name='Net Flow',
                 mode='lines+markers',
-                line=dict(color='#667eea', width=3),
+                line=dict(color=colors['accent'], width=3),
                 marker=dict(size=8)
             ))
             fig_monthly.update_layout(
-                title="Monthly Income vs Expenses with Net Flow",
+                title="",
                 xaxis_title="Month",
                 yaxis_title="Amount (€)",
                 barmode='group',
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                hovermode='x unified'
+                font_color='#ffffff',
+                hovermode='x unified',
+                height=400,
+                margin=dict(l=0, r=0, t=0, b=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color='#ffffff', size=11)),
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
             )
-            st.plotly_chart(fig_monthly, use_container_width=True)
+            st.plotly_chart(fig_monthly, use_container_width=True, key="income_expenses")
+        else:
+            st.info("No monthly data available for the selected filters.")
+        
+        # Expenses by Category - Bar Chart
+        st.markdown("### Expenses by Category")
+        if len(expenses_df) > 0:
+            category_expenses = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
+            category_expenses = category_expenses.sort_values('Amount_Abs', ascending=False)
             
-            st.subheader("🔄 Transaction Types Distribution")
-            type_counts = filtered_df['Type'].value_counts().reset_index()
-            type_counts.columns = ['Type', 'Count']
-            fig_type = px.bar(
-                type_counts,
-                x='Type',
-                y='Count',
-                title="Transaction Types Distribution",
-                labels={'Count': 'Number of Transactions', 'Type': 'Transaction Type'},
-                color='Count',
-                color_continuous_scale='Viridis'
+            fig_category = px.bar(
+                category_expenses,
+                x='Merchant_Category',
+                y='Amount_Abs',
+                title="",
+                labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
+                color='Amount_Abs',
+                color_continuous_scale='Plasma',
+                text='Amount_Abs'
             )
-            fig_type.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                showlegend=False
+            fig_category.update_traces(
+                texttemplate='€%{text:,.0f}',
+                textposition='outside',
+                textfont=dict(color='#ffffff', size=12, family='Inter')
             )
-            st.plotly_chart(fig_type, use_container_width=True)
-        
-        # Product Comparison
-        st.subheader("💳 Product Comparison")
-        product_income = filtered_df[filtered_df['Amount'] > 0].groupby('Product')['Amount'].sum().reset_index()
-        product_income.columns = ['Product', 'Income']
-        
-        product_expenses = filtered_df[filtered_df['Amount'] < 0].groupby('Product')['Amount_Abs'].sum().reset_index()
-        product_expenses.columns = ['Product', 'Expenses']
-        
-        product_comparison = pd.merge(product_income, product_expenses, on='Product', how='outer').fillna(0)
-        product_comparison['Net'] = product_comparison['Income'] - product_comparison['Expenses']
-        
-        fig_product = px.bar(
-            product_comparison,
-            x='Product',
-            y=['Income', 'Expenses', 'Net'],
-            title="Financial Activity by Product Type",
-            barmode='group',
-            color_discrete_map={'Income': '#10b981', 'Expenses': '#ef4444', 'Net': '#667eea'}
-        )
-        fig_product.update_layout(
+            fig_category.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            yaxis_title="Amount (€)"
-        )
-        st.plotly_chart(fig_product, use_container_width=True)
+                font_color='#ffffff',
+                height=400,
+                margin=dict(l=0, r=0, t=0, b=0),
+                showlegend=False,
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+            )
+            st.plotly_chart(fig_category, use_container_width=True, key="category_bar_spending_tab")
         
-        st.divider()
-        
-        # Additional Overview Visualizations
-        # Row 1: Country Overview (if available) and Top Merchants
+        # Financial Health Gauge
         col1, col2 = st.columns(2)
         
         with col1:
-            if 'Country' in filtered_df.columns and filtered_df['Country'].nunique() > 1:
-                st.markdown("### 🌍 Spending by Country")
-                country_spending = expenses_df.groupby('Country')['Amount_Abs'].sum().reset_index() if len(expenses_df) > 0 else pd.DataFrame()
-                if len(country_spending) > 0:
-                    country_spending = country_spending.sort_values('Amount_Abs', ascending=False)
-                    fig_country_overview = px.bar(
-                        country_spending,
-                        x='Country',
-                        y='Amount_Abs',
-                        title="Total Spending by Country",
-                        labels={'Amount_Abs': 'Spending (€)', 'Country': 'Country'},
-                        color='Amount_Abs',
-                        color_continuous_scale='Reds'
-                    )
-                    fig_country_overview.update_layout(
+            st.markdown("### Financial Health Score")
+            if total_income > 0:
+                health_score = min(100, max(0, (savings_rate + 50)))
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number+delta",
+                    value=health_score,
+                    domain={'x': [0, 1], 'y': [0, 1]},
+                    title={'text': "Financial Health Score", 'font': {'color': '#ffffff', 'size': 16}},
+                    delta={'reference': 50, 'font': {'color': '#ffffff'}},
+                    gauge={
+                        'axis': {'range': [None, 100], 'tickcolor': '#ffffff'},
+                        'bar': {'color': colors['primary']},
+                        'steps': [
+                            {'range': [0, 33], 'color': 'rgba(255, 0, 255, 0.2)'},
+                            {'range': [33, 66], 'color': 'rgba(255, 215, 0, 0.2)'},
+                            {'range': [66, 100], 'color': 'rgba(0, 245, 255, 0.2)'}
+                        ],
+                        'threshold': {
+                            'line': {'color': colors['secondary'], 'width': 4},
+                            'thickness': 0.75,
+                            'value': 90
+                        }
+                    }
+                ))
+                fig_gauge.update_layout(
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
-                        showlegend=False
+                    font_color='#ffffff',
+                    height=350,
+                    margin=dict(l=0, r=0, t=0, b=0)
                     )
-                    st.plotly_chart(fig_country_overview, use_container_width=True)
+                st.plotly_chart(fig_gauge, use_container_width=True, key="gauge_chart")
             
-            st.markdown("### 📈 Income vs Expenses Trend")
+        with col2:
+            st.markdown("### Monthly Net Flow Waterfall")
             if len(monthly_summary) > 0:
-                monthly_summary['Savings_Rate'] = (monthly_summary['Net'] / monthly_summary['Income'] * 100).replace([np.inf, -np.inf], 0)
-                fig_trend = go.Figure()
-                fig_trend.add_trace(go.Scatter(
-                    x=monthly_summary['Month'],
-                    y=monthly_summary['Income'],
-                    name='Income',
-                    mode='lines+markers',
-                    line=dict(color='#10b981', width=3),
-                    marker=dict(size=8)
+                waterfall_data = monthly_summary.copy()
+                waterfall_data['Net_Flow'] = waterfall_data['Net']
+                
+                fig_waterfall = go.Figure(go.Waterfall(
+                    name="Net Flow",
+                    orientation="v",
+                    measure=["relative"] * (len(waterfall_data) - 1) + ["total"],
+                    x=waterfall_data['Month'],
+                    textposition="outside",
+                    text=waterfall_data['Net_Flow'].apply(lambda x: f"€{x:,.0f}"),
+                    y=waterfall_data['Net_Flow'],
+                    connector={"line": {"color": colors['accent']}},
+                    increasing={"marker": {"color": colors['income']}},
+                    decreasing={"marker": {"color": colors['expense']}},
+                    totals={"marker": {"color": colors['accent']}}
                 ))
-                fig_trend.add_trace(go.Scatter(
-                    x=monthly_summary['Month'],
-                    y=monthly_summary['Expenses'],
-                    name='Expenses',
-                    mode='lines+markers',
-                    line=dict(color='#ef4444', width=3),
-                    marker=dict(size=8)
-                ))
-                fig_trend.update_layout(
-                    title="Income vs Expenses Trend Lines",
+                fig_waterfall.update_layout(
+                    title="",
                     xaxis_title="Month",
-                    yaxis_title="Amount (€)",
+                    yaxis_title="Net Flow (€)",
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified',
-                    xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig_trend, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 🏪 Top Spending Locations")
-            if len(expenses_df) > 0:
-                top_merchants = expenses_df.groupby('Description_Anon')['Amount_Abs'].sum().reset_index()
-                top_merchants = top_merchants.sort_values('Amount_Abs', ascending=False).head(10)
-                top_merchants.columns = ['Merchant', 'Total Spent']
-                
-                fig_merchants = px.bar(
-                    top_merchants,
-                    x='Total Spent',
-                    y='Merchant',
-                    orientation='h',
-                    title="Top 10 Spending Locations",
-                    labels={'Total Spent': 'Total Spent (€)', 'Merchant': 'Merchant'},
-                    color='Total Spent',
-                    color_continuous_scale='Blues'
-                )
-                fig_merchants.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
                     showlegend=False,
-                    yaxis={'categoryorder': 'total ascending'}
+                    height=350,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                    yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
                 )
-                st.plotly_chart(fig_merchants, use_container_width=True)
-            
-            st.markdown("### 📊 Category Spending (Bar Chart)")
-            if len(expenses_df) > 0:
-                category_bar = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
-                category_bar = category_bar.sort_values('Amount_Abs', ascending=False).head(10)
-                
-                fig_category_bar = px.bar(
-                    category_bar,
-                    x='Merchant_Category',
-                    y='Amount_Abs',
-                    title="Top 10 Categories by Spending",
-                    labels={'Amount_Abs': 'Spending (€)', 'Merchant_Category': 'Category'},
-                    color='Amount_Abs',
-                    color_continuous_scale='Greens'
-                )
-                fig_category_bar.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False,
-                    xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig_category_bar, use_container_width=True)
+                st.plotly_chart(fig_waterfall, use_container_width=True, key="waterfall_chart")
         
-        # Row 2: Financial Health Indicators and Activity Summary
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown("### 💎 Financial Health Score")
-            if total_income > 0:
-                health_score = min(100, max(0, savings_rate + 50))
-                health_color = "#10b981" if health_score >= 70 else "#f59e0b" if health_score >= 50 else "#ef4444"
-                st.markdown(f"""
-                <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, {health_color}15 0%, {health_color}05 100%); border-radius: 10px; border: 2px solid {health_color};">
-                    <h2 style="color: {health_color}; font-size: 3em; margin: 0;">{health_score:.0f}/100</h2>
-                    <p style="color: #666; margin-top: 10px;">Based on savings rate and spending patterns</p>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown("### 📅 Activity Summary")
-            date_range_days = (filtered_df['Date'].max() - filtered_df['Date'].min()).days if len(filtered_df) > 0 else 0
-            transactions_per_day = num_transactions / max(date_range_days, 1)
-            avg_daily_income = total_income / max(date_range_days, 1) if date_range_days > 0 else 0
-            avg_daily_expenses = total_expenses / max(date_range_days, 1) if date_range_days > 0 else 0
-            
-            st.metric("Period", f"{date_range_days} days")
-            st.metric("Transactions/Day", f"{transactions_per_day:.2f}")
-            st.metric("Avg Daily Income", f"€{avg_daily_income:,.2f}")
-            st.metric("Avg Daily Expenses", f"€{avg_daily_expenses:,.2f}")
-        
-        with col3:
-            st.markdown("### 🎯 Spending Insights")
-            if len(expenses_df) > 0:
-                largest_expense = expenses_df['Amount_Abs'].max()
-                avg_expense = expenses_df['Amount_Abs'].mean()
-                median_expense = expenses_df['Amount_Abs'].median()
-                
-                st.metric("Largest Single Expense", f"€{largest_expense:,.2f}")
-                st.metric("Average Expense", f"€{avg_expense:,.2f}")
-                st.metric("Median Expense", f"€{median_expense:,.2f}")
-                st.metric("Expense Transactions", f"{len(expenses_df)}")
-        
-        # Row 3: Cumulative Charts
-        st.subheader("📈 Cumulative Analysis")
+        # Advanced Transaction Visualizations
+        st.markdown("### Advanced Transaction Analysis")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("### 💰 Cumulative Income Over Time")
-            if len(income_df) > 0:
-                income_sorted = income_df.sort_values('Date')
-                income_sorted['Cumulative_Income'] = income_sorted['Amount'].cumsum()
-                
-                fig_cum_income = px.area(
-                    income_sorted,
-                    x='Date',
-                    y='Cumulative_Income',
-                    title="Cumulative Income Over Time",
-                    labels={'Cumulative_Income': 'Cumulative Income (€)', 'Date': 'Date'},
-                    color_discrete_sequence=['#10b981']
-                )
-                fig_cum_income.update_layout(
+            st.markdown("#### Transaction Size vs Balance")
+            if len(filtered_df) > 0:
+                scatter_df = filtered_df[filtered_df['Amount'] != 0].copy()
+                if len(scatter_df) > 0:
+                    scatter_df['Transaction_Type'] = scatter_df['Amount'].apply(lambda x: 'Income' if x > 0 else 'Expense')
+                    fig_scatter = px.scatter(
+                        scatter_df.head(500),
+                        x='Amount_Abs',
+                        y='Balance',
+                        color='Transaction_Type',
+                        size='Amount_Abs',
+                        hover_data=['Merchant_Category', 'Date'],
+                        title="",
+                        labels={'Amount_Abs': 'Transaction Amount (€)', 'Balance': 'Account Balance (€)'},
+                        color_discrete_map={'Income': colors['income'], 'Expense': colors['expense']}
+                    )
+                    fig_scatter.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified'
-                )
-                st.plotly_chart(fig_cum_income, use_container_width=True)
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        legend=dict(font=dict(color='#ffffff', size=11))
+                    )
+                    st.plotly_chart(fig_scatter, use_container_width=True, key="scatter_balance")
         
         with col2:
-            st.markdown("### 💸 Cumulative Expenses Over Time")
+            st.markdown("#### 3D Scatter: Amount vs Hour vs Day")
             if len(expenses_df) > 0:
-                expenses_sorted = expenses_df.sort_values('Date')
-                expenses_sorted['Cumulative_Expenses'] = expenses_sorted['Amount_Abs'].cumsum()
+                scatter_3d_data = expenses_df.head(300).copy()
+                scatter_3d_data['Weekday_Num'] = scatter_3d_data['Weekday'].map(weekday_map)
                 
-                fig_cum_expenses = px.area(
-                    expenses_sorted,
-                    x='Date',
-                    y='Cumulative_Expenses',
-                    title="Cumulative Expenses Over Time",
-                    labels={'Cumulative_Expenses': 'Cumulative Expenses (€)', 'Date': 'Date'},
-                    color_discrete_sequence=['#ef4444']
-                )
-                fig_cum_expenses.update_layout(
+                if len(scatter_3d_data) > 0:
+                    fig_3d = px.scatter_3d(
+                        scatter_3d_data,
+                        x='Hour',
+                        y='Weekday_Num',
+                        z='Amount_Abs',
+                        color='Merchant_Category',
+                        size='Amount_Abs',
+                        hover_data=['Date'],
+                        title="",
+                        labels={'Hour': 'Hour of Day', 'Weekday_Num': 'Day of Week', 'Amount_Abs': 'Amount (€)'},
+                        color_discrete_sequence=vibrant_colors
+                    )
+                    fig_3d.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified'
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        legend=dict(font=dict(color='#ffffff', size=11)),
+                        scene=dict(
+                            xaxis_title="Hour",
+                            yaxis_title="Day of Week",
+                            zaxis_title="Amount (€)",
+                            bgcolor='rgba(0,0,0,0)',
+                            xaxis=dict(gridcolor='rgba(255,255,255,0.1)', backgroundcolor='rgba(0,0,0,0)'),
+                            yaxis=dict(gridcolor='rgba(255,255,255,0.1)', backgroundcolor='rgba(0,0,0,0)'),
+                            zaxis=dict(gridcolor='rgba(255,255,255,0.1)', backgroundcolor='rgba(0,0,0,0)')
+                        )
+                    )
+                    st.plotly_chart(fig_3d, use_container_width=True, key="3d_scatter")
+        
+        # Hierarchical Visualizations
+        st.markdown("### Hierarchical Views")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Account Type → Category → Transaction Type")
+            if len(filtered_df) > 0:
+                sunburst_data = filtered_df.groupby(['Product', 'Merchant_Category', 'Type']).size().reset_index(name='Count')
+                sunburst_data = sunburst_data[sunburst_data['Count'] > 0]
+                
+                if len(sunburst_data) > 0:
+                    fig_sunburst = px.sunburst(
+                        sunburst_data,
+                        path=['Product', 'Merchant_Category', 'Type'],
+                        values='Count',
+                        title="",
+                        color='Count',
+                        color_continuous_scale='Plasma'
+                    )
+                    fig_sunburst.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        height=500,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        legend=dict(font=dict(color='#ffffff', size=11))
                 )
-                st.plotly_chart(fig_cum_expenses, use_container_width=True)
+                    st.plotly_chart(fig_sunburst, use_container_width=True, key="sunburst_chart")
         
-        # Row 4: Quick Stats Cards
-        st.subheader("📊 Quick Statistics")
-        stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
-        
-        with stat_col1:
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;">
-                <h3 style="margin: 0; font-size: 0.9em;">Total Transactions</h3>
-                <h1 style="margin: 10px 0; font-size: 2.5em;">{}</h1>
-            </div>
-            """.format(num_transactions), unsafe_allow_html=True)
-        
-        with stat_col2:
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;">
-                <h3 style="margin: 0; font-size: 0.9em;">Total Income</h3>
-                <h1 style="margin: 10px 0; font-size: 2.5em;">€{:.0f}K</h1>
-            </div>
-            """.format(total_income/1000), unsafe_allow_html=True)
-        
-        with stat_col3:
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;">
-                <h3 style="margin: 0; font-size: 0.9em;">Total Expenses</h3>
-                <h1 style="margin: 10px 0; font-size: 2.5em;">€{:.0f}K</h1>
-            </div>
-            """.format(total_expenses/1000), unsafe_allow_html=True)
-        
-        with stat_col4:
-            net_color = "#10b981" if net_flow >= 0 else "#ef4444"
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, {} 0%, {} 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;">
-                <h3 style="margin: 0; font-size: 0.9em;">Net Flow</h3>
-                <h1 style="margin: 10px 0; font-size: 2.5em;">€{:.0f}K</h1>
-            </div>
-            """.format(net_color, net_color, net_flow/1000), unsafe_allow_html=True)
+        with col2:
+            st.markdown("#### Category Spending Treemap")
+            if len(expenses_df) > 0:
+                treemap_data = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
+                treemap_data = treemap_data.sort_values('Amount_Abs', ascending=False)
+                
+                if len(treemap_data) > 0:
+                    fig_treemap = px.treemap(
+                        treemap_data,
+                        path=['Merchant_Category'],
+                        values='Amount_Abs',
+                        title="",
+                        color='Amount_Abs',
+                        color_continuous_scale='Plasma'
+                    )
+                    fig_treemap.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        height=500,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        legend=dict(font=dict(color='#ffffff', size=11))
+                    )
+                    st.plotly_chart(fig_treemap, use_container_width=True, key="treemap_chart")
     
     with tab2:
-        # Spending Analysis Tab
+        st.markdown("## Spending Analysis")
+        
+        if len(expenses_df) > 0:
+            # Key Spending Metrics
+            st.markdown("### Spending Overview")
+            metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+            
+            with metric_col1:
+                total_spending = expenses_df['Amount_Abs'].sum()
+                st.markdown(f"""
+                <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                    <div class="metric-label">Total Spending</div>
+                    <div class="metric-value">€{total_spending:,.2f}</div>
+            </div>
+                """, unsafe_allow_html=True)
+            
+            with metric_col2:
+                avg_transaction = expenses_df['Amount_Abs'].mean()
+                st.markdown(f"""
+                <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                    <div class="metric-label">Avg Transaction</div>
+                    <div class="metric-value">€{avg_transaction:,.2f}</div>
+            </div>
+                """, unsafe_allow_html=True)
+            
+            with metric_col3:
+                largest_expense = expenses_df['Amount_Abs'].max()
+                st.markdown(f"""
+                <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                    <div class="metric-label">Largest Expense</div>
+                    <div class="metric-value">€{largest_expense:,.2f}</div>
+            </div>
+                """, unsafe_allow_html=True)
+            
+            with metric_col4:
+                total_transactions = len(expenses_df)
+                st.markdown(f"""
+                <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                    <div class="metric-label">Transactions</div>
+                    <div class="metric-value">{total_transactions:,}</div>
+            </div>
+                """, unsafe_allow_html=True)
+    
+            # Main Spending Visualizations
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📅 Spending by Day of Week")
-            if len(expenses_df) > 0:
-                weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                weekday_expenses = expenses_df.groupby('Weekday')['Amount_Abs'].sum().reset_index()
-                weekday_expenses['Weekday'] = pd.Categorical(weekday_expenses['Weekday'], categories=weekday_order, ordered=True)
-                weekday_expenses = weekday_expenses.sort_values('Weekday')
-                
-                fig_weekday = px.bar(
-                    weekday_expenses,
-                    x='Weekday',
-                    y='Amount_Abs',
-                    title="Total Spending by Day of Week",
-                    labels={'Amount_Abs': 'Total Spending (€)', 'Weekday': 'Day of Week'},
-                    color='Amount_Abs',
-                    color_continuous_scale='Blues'
-                )
-                fig_weekday.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False
-                )
-                st.plotly_chart(fig_weekday, use_container_width=True)
+            st.markdown("### Spending by Category")
+            category_expenses = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
+            category_expenses = category_expenses.sort_values('Amount_Abs', ascending=False)
             
-            st.subheader("⏰ Spending by Hour of Day")
-            if len(expenses_df) > 0:
-                hour_expenses = expenses_df.groupby('Hour')['Amount_Abs'].sum().reset_index()
-                hour_expenses = hour_expenses.sort_values('Hour')
-                
-                fig_hour = px.area(
-                    hour_expenses,
-                    x='Hour',
-                    y='Amount_Abs',
-                    title="Total Spending by Hour of Day",
-                    labels={'Amount_Abs': 'Total Spending (€)', 'Hour': 'Hour (24h format)'},
-                    color_discrete_sequence=['#764ba2']
-                )
-                fig_hour.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified',
-                    xaxis=dict(tickmode='linear', dtick=2)
-                )
-                st.plotly_chart(fig_hour, use_container_width=True)
+            fig_category = px.bar(
+                category_expenses,
+                x='Merchant_Category',
+                y='Amount_Abs',
+                title="",
+                labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
+                color='Amount_Abs',
+                color_continuous_scale='Plasma',
+                text='Amount_Abs'
+            )
+            fig_category.update_traces(
+                texttemplate='€%{text:,.0f}',
+                textposition='outside',
+                textfont=dict(color='#ffffff', size=11)
+            )
+            fig_category.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                height=400,
+                margin=dict(l=0, r=0, t=0, b=0),
+                showlegend=False,
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+            )
+            st.plotly_chart(fig_category, use_container_width=True, key="category_bar_spending")
         
         with col2:
-            st.subheader("🔥 Top Spending Locations")
-            if len(expenses_df) > 0:
-                # Get top merchants (using Description_Anon as merchant name)
-                top_merchants = expenses_df.groupby('Description_Anon')['Amount_Abs'].sum().reset_index()
-                top_merchants = top_merchants.sort_values('Amount_Abs', ascending=False).head(15)
-                top_merchants.columns = ['Merchant', 'Total Spent']
-                
-                fig_merchants = px.bar(
-                    top_merchants,
-                    x='Total Spent',
-                    y='Merchant',
-                    orientation='h',
-                    title="Top 15 Spending Locations",
-                    labels={'Total Spent': 'Total Spent (€)', 'Merchant': 'Merchant'},
-                    color='Total Spent',
-                    color_continuous_scale='Reds'
-                )
-                fig_merchants.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False,
-                    yaxis={'categoryorder': 'total ascending'}
-                )
-                st.plotly_chart(fig_merchants, use_container_width=True)
+            st.markdown("### Spending by Day of Week")
+            weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            weekday_expenses = expenses_df.groupby('Weekday')['Amount_Abs'].sum().reset_index()
+            weekday_expenses['Weekday'] = pd.Categorical(weekday_expenses['Weekday'], categories=weekday_order, ordered=True)
+            weekday_expenses = weekday_expenses.sort_values('Weekday')
             
-            st.subheader("📊 Average Transaction by Category")
-            if len(expenses_df) > 0:
-                avg_by_category = expenses_df.groupby('Merchant_Category')['Amount_Abs'].agg(['mean', 'count']).reset_index()
-                avg_by_category.columns = ['Category', 'Avg Amount', 'Count']
-                avg_by_category = avg_by_category[avg_by_category['Count'] >= 3].sort_values('Avg Amount', ascending=False).head(10)
-                
-                fig_avg = px.bar(
-                    avg_by_category,
-                    x='Category',
-                    y='Avg Amount',
-                    title="Average Transaction Amount by Category (min 3 transactions)",
-                    labels={'Avg Amount': 'Average Amount (€)', 'Category': 'Category'},
-                    color='Avg Amount',
-                    color_continuous_scale='Greens'
-                )
-                fig_avg.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False,
-                    xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig_avg, use_container_width=True)
+            fig_weekday = px.bar(
+                weekday_expenses,
+                x='Weekday',
+                y='Amount_Abs',
+                title="",
+                labels={'Amount_Abs': 'Spending (€)', 'Weekday': 'Day'},
+                color='Amount_Abs',
+                color_continuous_scale='Plasma',
+                text='Amount_Abs'
+            )
+            fig_weekday.update_traces(
+                texttemplate='€%{text:,.0f}',
+                textposition='outside',
+                textfont=dict(color='#ffffff', size=11)
+            )
+            fig_weekday.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                height=400,
+                margin=dict(l=0, r=0, t=0, b=0),
+                showlegend=False,
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+            )
+            st.plotly_chart(fig_weekday, use_container_width=True, key="weekday_spending")
         
-        # Spending Heatmap
-        st.subheader("🗓️ Spending Heatmap: Day of Week vs Hour")
-        if len(expenses_df) > 0:
+        # Temporal Analysis
+        st.markdown("### Temporal Spending Patterns")
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            st.markdown("#### Spending by Hour of Day")
+            hour_expenses = expenses_df.groupby('Hour')['Amount_Abs'].sum().reset_index()
+            hour_expenses = hour_expenses.sort_values('Hour')
+            
+            fig_hour = px.line(
+                hour_expenses,
+                x='Hour',
+                y='Amount_Abs',
+                title="",
+                labels={'Amount_Abs': 'Spending (€)', 'Hour': 'Hour'},
+                color_discrete_sequence=[colors['secondary']],
+                markers=True
+            )
+            fig_hour.update_traces(
+                line=dict(width=3),
+                marker=dict(size=6),
+                fill='tonexty',
+                fillcolor=f'rgba(255, 0, 255, 0.1)'
+            )
+            fig_hour.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                hovermode='x unified',
+                height=350,
+                margin=dict(l=0, r=0, t=0, b=0),
+                xaxis=dict(tickmode='linear', dtick=2, gridcolor='rgba(255,255,255,0.1)'),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+            )
+            st.plotly_chart(fig_hour, use_container_width=True, key="hour_spending")
+        
+        with col4:
+            st.markdown("#### Spending Heatmap: Day vs Hour")
             weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
             heatmap_data = expenses_df.groupby(['Weekday', 'Hour'])['Amount_Abs'].sum().reset_index()
             heatmap_data['Weekday'] = pd.Categorical(heatmap_data['Weekday'], categories=weekday_order, ordered=True)
@@ -659,545 +1345,465 @@ if df is not None:
             
             fig_heatmap = px.imshow(
                 heatmap_pivot,
-                labels=dict(x="Hour of Day", y="Day of Week", color="Spending (€)"),
-                title="Spending Patterns: When Do You Spend Most?",
-                color_continuous_scale='YlOrRd',
+                labels=dict(x="Hour", y="Day", color="Spending (€)"),
+                title="",
+                color_continuous_scale='Plasma',
                 aspect="auto"
             )
             fig_heatmap.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                height=350,
+                margin=dict(l=0, r=0, t=0, b=0)
             )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
-    
-    with tab3:
-        # Trends Tab
+            st.plotly_chart(fig_heatmap, use_container_width=True, key="spending_heatmap_spending_tab")
+        
+        # Top Merchants
+        st.markdown("### Top Spending Locations")
+        if len(expenses_df) > 0:
+            top_merchants = expenses_df.groupby('Description_Anon')['Amount_Abs'].sum().reset_index()
+            top_merchants = top_merchants.sort_values('Amount_Abs', ascending=False).head(15)
+            top_merchants.columns = ['Merchant', 'Total Spent']
+            
+            fig_merchants = px.bar(
+                top_merchants,
+                x='Total Spent',
+                y='Merchant',
+                orientation='h',
+                title="",
+                labels={'Total Spent': 'Total Spent (€)', 'Merchant': 'Merchant'},
+                color='Total Spent',
+                color_continuous_scale='Plasma',
+                text='Total Spent'
+            )
+            fig_merchants.update_traces(
+                texttemplate='€%{text:,.0f}',
+                textposition='outside',
+                textfont=dict(color='#ffffff', size=10)
+            )
+            fig_merchants.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                height=450,
+                margin=dict(l=0, r=0, t=0, b=0),
+                showlegend=False,
+                yaxis={'categoryorder': 'total ascending'},
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+            )
+            st.plotly_chart(fig_merchants, use_container_width=True, key="top_merchants")
+        
+        # Additional Spending Insights
+        st.markdown("### Spending Insights")
+        col5, col6 = st.columns(2)
+        
+        with col5:
+            st.markdown("#### Monthly Spending by Category")
+            if len(expenses_df) > 0 and 'Date' in expenses_df.columns:
+                expenses_df_copy = expenses_df.copy()
+                expenses_df_copy['YearMonth'] = expenses_df_copy['Date'].dt.to_period('M').astype(str)
+                top_cats_monthly = expenses_df_copy.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(5).index
+                monthly_cat = expenses_df_copy[expenses_df_copy['Merchant_Category'].isin(top_cats_monthly)]
+                monthly_cat_summary = monthly_cat.groupby(['YearMonth', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
+                
+                if len(monthly_cat_summary) > 0:
+                    fig_monthly_cat = px.line(
+                        monthly_cat_summary,
+                        x='YearMonth',
+                        y='Amount_Abs',
+                        color='Merchant_Category',
+                        title="",
+                        labels={'Amount_Abs': 'Spending (€)', 'YearMonth': 'Month'},
+                        markers=True,
+                        color_discrete_sequence=vibrant_colors
+                    )
+                    fig_monthly_cat.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        hovermode='x unified',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        legend=dict(font=dict(color='#ffffff', size=11))
+                    )
+                    st.plotly_chart(fig_monthly_cat, use_container_width=True, key="monthly_category_trends")
+        
+        with col6:
+            st.markdown("#### Average Spending per Transaction by Category")
+            if len(expenses_df) > 0:
+                avg_by_category = expenses_df.groupby('Merchant_Category').agg({
+                    'Amount_Abs': ['mean', 'count']
+                }).reset_index()
+                avg_by_category.columns = ['Category', 'Avg_Amount', 'Count']
+                avg_by_category = avg_by_category[avg_by_category['Count'] >= 3]  # Only categories with at least 3 transactions
+                avg_by_category = avg_by_category.sort_values('Avg_Amount', ascending=False).head(8)
+                
+                fig_avg_cat = px.bar(
+                    avg_by_category,
+                    x='Category',
+                    y='Avg_Amount',
+                    title="",
+                    labels={'Avg_Amount': 'Average Amount (€)', 'Category': 'Category'},
+                    color='Avg_Amount',
+                    color_continuous_scale='Plasma',
+                    text='Avg_Amount'
+                )
+                fig_avg_cat.update_traces(
+                    texttemplate='€%{text:,.0f}',
+                    textposition='outside',
+                    textfont=dict(color='#ffffff', size=10)
+                )
+                fig_avg_cat.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    showlegend=False,
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                    yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                )
+                st.plotly_chart(fig_avg_cat, use_container_width=True, key="avg_category_spending")
+        
+        # Advanced Spending Visualizations
+        st.markdown("### Spending Distribution Analysis")
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📈 Cumulative Spending Over Time")
+            st.markdown("#### Transaction Amount Distribution by Category")
             if len(expenses_df) > 0:
-                expenses_sorted = expenses_df.sort_values('Date')
-                expenses_sorted['Cumulative'] = expenses_sorted['Amount_Abs'].cumsum()
+                top_cats = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(8).index
+                expenses_filtered = expenses_df[expenses_df['Merchant_Category'].isin(top_cats)]
                 
-                fig_cumulative = px.line(
-                    expenses_sorted,
-                    x='Date',
-                    y='Cumulative',
-                    title="Cumulative Spending Over Time",
-                    labels={'Cumulative': 'Cumulative Spending (€)', 'Date': 'Date'},
-                    color_discrete_sequence=['#ef4444']
-                )
-                fig_cumulative.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified'
-                )
-                st.plotly_chart(fig_cumulative, use_container_width=True)
-            
-            st.subheader("📊 Category Trends Over Time")
+                if len(expenses_filtered) > 0:
+                    fig_box = px.box(
+                        expenses_filtered,
+                        x='Merchant_Category',
+                        y='Amount_Abs',
+                        title="",
+                        labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
+                        color='Merchant_Category',
+                        color_discrete_sequence=vibrant_colors
+                    )
+                    fig_box.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        xaxis_tickangle=-45,
+                        showlegend=False,
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                    )
+                    st.plotly_chart(fig_box, use_container_width=True, key="box_plot_categories")
+        
+        with col2:
+            st.markdown("#### Spending Distribution (Violin Plot)")
             if len(expenses_df) > 0:
+                top_cats_violin = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(6).index
+                expenses_violin = expenses_df[expenses_df['Merchant_Category'].isin(top_cats_violin)]
+                
+                if len(expenses_violin) > 0:
+                    fig_violin = px.violin(
+                        expenses_violin,
+                        x='Merchant_Category',
+                        y='Amount_Abs',
+                        title="",
+                        labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
+                        color='Merchant_Category',
+                        color_discrete_sequence=vibrant_colors,
+                        box=True
+                    )
+                    fig_violin.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        xaxis_tickangle=-45,
+                        showlegend=False,
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                    )
+                    st.plotly_chart(fig_violin, use_container_width=True, key="violin_plot")
+        
+    
+    with tab3:
+        st.markdown("## Trends & Analytics")
+        
+        # Key Insights - Moved to top
+        st.markdown("### Key Insights")
+        insight_col1, insight_col2, insight_col3 = st.columns(3)
+        
+        with insight_col1:
+            if len(expenses_df) > 0:
+                top_category = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().idxmax()
+                top_category_amount = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().max()
+                st.markdown(f"""
+                <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem;">Top Spending Category</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff;">{top_category}</div>
+                    <div style="font-size: 1rem; color: {colors['primary']}; margin-top: 0.5rem;">€{top_category_amount:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with insight_col2:
+            if len(expenses_df) > 0:
+                peak_hour = expenses_df.groupby('Hour')['Amount_Abs'].sum().idxmax()
+                peak_hour_amount = expenses_df.groupby('Hour')['Amount_Abs'].sum().max()
+                st.markdown(f"""
+                <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem;">Peak Spending Hour</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff;">{peak_hour}:00</div>
+                    <div style="font-size: 1rem; color: {colors['primary']}; margin-top: 0.5rem;">€{peak_hour_amount:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with insight_col3:
+            if len(expenses_df) > 0:
+                avg_expense = expenses_df['Amount_Abs'].mean()
+                st.markdown(f"""
+                <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div style="font-size: 0.875rem; color: #a0a0a0; margin-bottom: 0.5rem;">Average Transaction</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ffffff;">€{avg_expense:,.2f}</div>
+                    <div style="font-size: 1rem; color: {colors['primary']}; margin-top: 0.5rem;">per transaction</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Category Trends Over Time")
+            if len(expenses_df) > 0 and 'Date' in expenses_df.columns:
                 top_categories = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(5).index
                 category_trends = expenses_df[expenses_df['Merchant_Category'].isin(top_categories)].copy()
-                category_trends['YearMonth'] = category_trends['Date'].dt.to_period('M').astype(str)
-                category_monthly = category_trends.groupby(['YearMonth', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
-                
+                if len(category_trends) > 0:
+                    category_trends['YearMonth'] = category_trends['Date'].dt.to_period('M').astype(str)
+                    category_monthly = category_trends.groupby(['YearMonth', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
+                else:
+                    category_monthly = pd.DataFrame(columns=['YearMonth', 'Merchant_Category', 'Amount_Abs'])
+            else:
+                category_monthly = pd.DataFrame(columns=['YearMonth', 'Merchant_Category', 'Amount_Abs'])
+            
+            if len(category_monthly) > 0:
                 fig_trends = px.line(
                     category_monthly,
                     x='YearMonth',
                     y='Amount_Abs',
                     color='Merchant_Category',
-                    title="Top 5 Categories: Monthly Spending Trends",
+                    title="",
                     labels={'Amount_Abs': 'Spending (€)', 'YearMonth': 'Month'},
-                    markers=True
+                    markers=True,
+                    color_discrete_sequence=vibrant_colors
                 )
                 fig_trends.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
                     hovermode='x unified',
-                    xaxis_tickangle=-45
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                    yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                    legend=dict(font=dict(color='#ffffff', size=11))
                 )
-                st.plotly_chart(fig_trends, use_container_width=True)
+                st.plotly_chart(fig_trends, use_container_width=True, key="category_trends")
+            else:
+                st.info("No trend data available.")
         
         with col2:
-            st.subheader("💹 Income Trends Over Time")
-            if len(income_df) > 0:
-                income_sorted = income_df.sort_values('Date')
-                income_sorted['YearMonth'] = income_sorted['Date'].dt.to_period('M').astype(str)
-                income_monthly = income_sorted.groupby('YearMonth')['Amount'].sum().reset_index()
-                
-                fig_income_trend = px.bar(
-                    income_monthly,
-                    x='YearMonth',
-                    y='Amount',
-                    title="Monthly Income Trends",
-                    labels={'Amount': 'Income (€)', 'YearMonth': 'Month'},
-                    color='Amount',
-                    color_continuous_scale='Greens'
-                )
-                fig_income_trend.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False,
-                    xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig_income_trend, use_container_width=True)
-            
-            st.subheader("📉 Spending Velocity (Transactions per Day)")
+            st.markdown("### Spending Heatmap: Day vs Hour")
             if len(expenses_df) > 0:
-                daily_transactions = expenses_df.groupby('Date').size().reset_index()
-                daily_transactions.columns = ['Date', 'Transaction Count']
-                daily_transactions = daily_transactions.sort_values('Date')
+                weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                heatmap_data = expenses_df.groupby(['Weekday', 'Hour'])['Amount_Abs'].sum().reset_index()
+                heatmap_data['Weekday'] = pd.Categorical(heatmap_data['Weekday'], categories=weekday_order, ordered=True)
+                heatmap_pivot = heatmap_data.pivot(index='Weekday', columns='Hour', values='Amount_Abs').fillna(0)
                 
-                fig_velocity = px.scatter(
-                    daily_transactions,
-                    x='Date',
-                    y='Transaction Count',
-                    title="Daily Transaction Frequency",
-                    labels={'Transaction Count': 'Number of Transactions', 'Date': 'Date'},
-                    color='Transaction Count',
-                    color_continuous_scale='Blues',
-                    size='Transaction Count'
+                fig_heatmap = px.imshow(
+                    heatmap_pivot,
+                    labels=dict(x="Hour", y="Day", color="Spending (€)"),
+                    title="",
+                    color_continuous_scale='Plasma',
+                    aspect="auto"
                 )
-                fig_velocity.update_layout(
+                fig_heatmap.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified'
+                    font_color='#ffffff',
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0)
                 )
-                st.plotly_chart(fig_velocity, use_container_width=True)
+                st.plotly_chart(fig_heatmap, use_container_width=True, key="spending_heatmap_trends_tab")
         
-        # Monthly Savings Rate
-        st.subheader("💎 Monthly Savings Rate")
-        if len(monthly_summary) > 0:
-            monthly_summary['Savings_Rate'] = (monthly_summary['Net'] / monthly_summary['Income'] * 100).replace([np.inf, -np.inf], 0)
+        # Cumulative Spending
+        st.markdown("### Cumulative Spending Over Time")
+        if len(expenses_df) > 0 and 'Date' in expenses_df.columns:
+            expenses_sorted = expenses_df.sort_values('Date').copy()
+            expenses_sorted['Cumulative'] = expenses_sorted['Amount_Abs'].cumsum()
             
-            fig_savings = go.Figure()
-            fig_savings.add_trace(go.Bar(
-                x=monthly_summary['Month'],
-                y=monthly_summary['Savings_Rate'],
-                name='Savings Rate (%)',
-                marker_color='#667eea'
-            ))
-            fig_savings.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="Break-even")
-            fig_savings.update_layout(
-                title="Monthly Savings Rate (%)",
-                xaxis_title="Month",
-                yaxis_title="Savings Rate (%)",
+            fig_cumulative = px.line(
+                expenses_sorted,
+                x='Date',
+                y='Cumulative',
+                title="",
+                labels={'Cumulative': 'Cumulative Spending (€)', 'Date': 'Date'},
+                color_discrete_sequence=[colors['expense']]
+            )
+            fig_cumulative.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
                 hovermode='x unified',
-                xaxis_tickangle=-45
+                height=400,
+                margin=dict(l=0, r=0, t=0, b=0),
+                xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
             )
-            st.plotly_chart(fig_savings, use_container_width=True)
-    
-    with tab4:
-        # Country Comparison Tab
-        st.subheader("🌍 Country Comparison Analysis")
+            st.plotly_chart(fig_cumulative, use_container_width=True, key="cumulative_spending")
         
-        # Check if Country column exists
-        if 'Country' not in filtered_df.columns:
-            st.warning("⚠️ Country data not available. Please regenerate data with location information.")
-        else:
-            # Country Overview Metrics
-            country_col1, country_col2, country_col3, country_col4 = st.columns(4)
-            
-            with country_col1:
-                if len(filtered_df) > 0:
-                    countries_visited = filtered_df['Country'].nunique() if 'Country' in filtered_df.columns else 0
-                    st.metric("Countries Visited", countries_visited)
-            
-            with country_col2:
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    most_expensive_country = expenses_df.groupby('Country')['Amount_Abs'].sum().idxmax()
-                    st.metric("Most Expensive Country", most_expensive_country)
-            
-            with country_col3:
-                if len(filtered_df) > 0 and 'Country' in filtered_df.columns:
-                    most_transactions_country = filtered_df['Country'].mode()[0] if len(filtered_df['Country'].mode()) > 0 else "N/A"
-                    st.metric("Most Transactions", most_transactions_country)
-            
-            with country_col4:
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    avg_by_country = expenses_df.groupby('Country')['Amount_Abs'].mean()
-                    highest_avg_country = avg_by_country.idxmax()
-                    st.metric("Highest Avg Transaction", highest_avg_country)
-            
-            st.divider()
-            
-            # Row 1: Total Spending by Country
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("### 💰 Total Spending by Country")
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    country_spending = expenses_df.groupby('Country')['Amount_Abs'].sum().reset_index()
-                    country_spending = country_spending.sort_values('Amount_Abs', ascending=False)
-                    
-                    fig_country_bar = px.bar(
-                        country_spending,
-                        x='Country',
-                        y='Amount_Abs',
-                        title="Total Spending by Country",
-                        labels={'Amount_Abs': 'Total Spending (€)', 'Country': 'Country'},
-                        color='Amount_Abs',
-                        color_continuous_scale='Reds'
-                    )
-                    fig_country_bar.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig_country_bar, use_container_width=True)
+        # Advanced Trend Visualizations
+        st.markdown("### Advanced Trend Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Stacked Area: Category Trends")
+            if len(expenses_df) > 0 and 'Date' in expenses_df.columns:
+                expenses_df_copy = expenses_df.copy()
+                expenses_df_copy['YearMonth'] = expenses_df_copy['Date'].dt.to_period('M').astype(str)
+                top_cats_area = expenses_df_copy.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(6).index
+                area_data = expenses_df_copy[expenses_df_copy['Merchant_Category'].isin(top_cats_area)]
                 
-                st.markdown("### 📊 Spending Distribution by Country")
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    country_pie = expenses_df.groupby('Country')['Amount_Abs'].sum().reset_index()
-                    fig_country_pie = px.pie(
-                        country_pie,
-                        values='Amount_Abs',
-                        names='Country',
-                        title="Spending Distribution Across Countries",
-                        color_discrete_sequence=px.colors.qualitative.Set2
-                    )
-                    fig_country_pie.update_traces(textposition='inside', textinfo='percent+label')
-                    st.plotly_chart(fig_country_pie, use_container_width=True)
-            
-            with col2:
-                st.markdown("### 📈 Monthly Spending Trends by Country")
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    expenses_df['YearMonth'] = expenses_df['Date'].dt.to_period('M').astype(str)
-                    country_monthly = expenses_df.groupby(['YearMonth', 'Country'])['Amount_Abs'].sum().reset_index()
+                if len(area_data) > 0:
+                    area_monthly = area_data.groupby(['YearMonth', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
                     
-                    fig_country_trend = px.line(
-                        country_monthly,
+                    fig_area = px.area(
+                        area_monthly,
                         x='YearMonth',
                         y='Amount_Abs',
-                        color='Country',
-                        title="Monthly Spending Trends by Country",
+                        color='Merchant_Category',
+                        title="",
                         labels={'Amount_Abs': 'Spending (€)', 'YearMonth': 'Month'},
-                        markers=True
+                        color_discrete_sequence=vibrant_colors
                     )
-                    fig_country_trend.update_layout(
+                    fig_area.update_layout(
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
-                        hovermode='x unified',
-                        xaxis_tickangle=-45
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        legend=dict(font=dict(color='#ffffff', size=11))
                     )
-                    st.plotly_chart(fig_country_trend, use_container_width=True)
+                    st.plotly_chart(fig_area, use_container_width=True, key="stacked_area")
+        
+        with col2:
+            st.markdown("#### Spending Pattern Radar Chart")
+            if len(expenses_df) > 0:
+                weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                weekday_spending = expenses_df.groupby('Weekday')['Amount_Abs'].sum().reset_index()
                 
-                st.markdown("### 🏙️ Spending by City")
-                if len(expenses_df) > 0 and 'City' in expenses_df.columns:
-                    city_spending = expenses_df.groupby('City')['Amount_Abs'].sum().reset_index()
-                    city_spending = city_spending.sort_values('Amount_Abs', ascending=False)
-                    
-                    fig_city = px.bar(
-                        city_spending,
-                        x='City',
-                        y='Amount_Abs',
-                        title="Total Spending by City",
-                        labels={'Amount_Abs': 'Total Spending (€)', 'City': 'City'},
+                all_weekdays_df = pd.DataFrame({'Weekday': weekday_order})
+                weekday_spending = pd.merge(all_weekdays_df, weekday_spending, on='Weekday', how='left')
+                weekday_spending['Amount_Abs'] = weekday_spending['Amount_Abs'].fillna(0)
+                weekday_spending['Weekday'] = pd.Categorical(weekday_spending['Weekday'], categories=weekday_order, ordered=True)
+                weekday_spending = weekday_spending.sort_values('Weekday')
+                
+                max_val = weekday_spending['Amount_Abs'].max()
+                if max_val > 0:
+                    weekday_spending['Normalized'] = (weekday_spending['Amount_Abs'] / max_val * 100)
+                else:
+                    weekday_spending['Normalized'] = 0
+                
+                # Prepare data for radar chart - need to close the shape by repeating first value
+                r_values = weekday_spending['Normalized'].tolist()
+                theta_values = weekday_spending['Weekday'].tolist()
+                
+                # Close the shape by adding the first value at the end
+                if len(r_values) > 0:
+                    r_values.append(r_values[0])
+                    theta_values.append(theta_values[0])
+                
+                fig_radar = go.Figure()
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=r_values,
+                    theta=theta_values,
+                    fill='toself',
+                    name='Spending Pattern',
+                    line_color=colors['primary'],
+                    fillcolor=colors['primary'],
+                    opacity=0.3
+                ))
+                fig_radar.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            range=[0, 100],
+                            tickcolor='#ffffff',
+                            tickfont=dict(color='#ffffff', size=10),
+                            gridcolor='rgba(255,255,255,0.2)',
+                            linecolor='rgba(255,255,255,0.3)',
+                            showline=True
+                        ),
+                        angularaxis=dict(
+                            tickcolor='#ffffff',
+                            tickfont=dict(color='#ffffff', size=10),
+                            gridcolor='rgba(255,255,255,0.2)',
+                            linecolor='rgba(255,255,255,0.3)',
+                            showline=True
+                        ),
+                        bgcolor='rgba(0,0,0,0)'
+                    ),
+                    showlegend=True,
+                    title="",
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    legend=dict(font=dict(color='#ffffff', size=11))
+                )
+                st.plotly_chart(fig_radar, use_container_width=True, key="radar_chart")
+        
+        # Multi-dimensional Analysis
+        st.markdown("### Multi-Dimensional Analysis")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Parallel Coordinates")
+            if len(expenses_df) > 0:
+                parallel_data = expenses_df[['Amount_Abs', 'Hour', 'Weekday', 'Merchant_Category']].copy()
+                parallel_data = parallel_data.head(200)
+                
+                parallel_data['Weekday_Num'] = parallel_data['Weekday'].map(weekday_map)
+                
+                top_cats_parallel = parallel_data['Merchant_Category'].value_counts().head(5).index
+                parallel_data = parallel_data[parallel_data['Merchant_Category'].isin(top_cats_parallel)]
+                
+                if len(parallel_data) > 0:
+                    fig_parallel = px.parallel_coordinates(
+                        parallel_data,
                         color='Amount_Abs',
-                        color_continuous_scale='Blues'
+                        dimensions=['Amount_Abs', 'Hour', 'Weekday_Num'],
+                        labels={'Amount_Abs': 'Amount', 'Hour': 'Hour', 'Weekday_Num': 'Day'},
+                        color_continuous_scale='Plasma',
+                        title=""
                     )
-                    fig_city.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig_city, use_container_width=True)
-            
-            # Row 2: Category Comparison by Country
-            st.markdown("### 🛍️ Spending Categories by Country")
-            if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                country_category = expenses_df.groupby(['Country', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
-                country_category_pivot = country_category.pivot(index='Merchant_Category', columns='Country', values='Amount_Abs').fillna(0)
-                
-                fig_category_country = px.bar(
-                    country_category.reset_index(),
-                    x='Merchant_Category',
-                    y='Amount_Abs',
-                    color='Country',
-                    title="Spending Categories Comparison Across Countries",
-                    labels={'Amount_Abs': 'Spending (€)', 'Merchant_Category': 'Category'},
-                    barmode='group'
-                )
-                fig_category_country.update_layout(
+                    fig_parallel.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    xaxis_tickangle=-45,
-                    hovermode='x unified'
-                )
-                st.plotly_chart(fig_category_country, use_container_width=True)
-            
-            # Row 3: Heatmap and Box Plot
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("### 🔥 Spending Heatmap: Country vs Category")
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    heatmap_country = expenses_df.groupby(['Country', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
-                    heatmap_pivot = heatmap_country.pivot(index='Merchant_Category', columns='Country', values='Amount_Abs').fillna(0)
-                    
-                    fig_heatmap_country = px.imshow(
-                        heatmap_pivot,
-                        labels=dict(x="Country", y="Category", color="Spending (€)"),
-                        title="Spending Heatmap: Country vs Category",
-                        color_continuous_scale='YlOrRd',
-                        aspect="auto"
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0)
                     )
-                    fig_heatmap_country.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)'
-                    )
-                    st.plotly_chart(fig_heatmap_country, use_container_width=True)
-            
-            with col2:
-                st.markdown("### 📦 Transaction Amount Distribution by Country")
-                if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                    fig_box_country = px.box(
-                        expenses_df,
-                        x='Country',
-                        y='Amount_Abs',
-                        title="Transaction Amount Distribution by Country",
-                        labels={'Amount_Abs': 'Amount (€)', 'Country': 'Country'},
-                        color='Country'
-                    )
-                    fig_box_country.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig_box_country, use_container_width=True)
-            
-            # Row 4: Advanced Comparisons
-            st.markdown("### 📊 Country Statistics Comparison")
-            if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                country_stats = expenses_df.groupby('Country').agg({
-                    'Amount_Abs': ['sum', 'mean', 'median', 'count', 'std']
-                }).reset_index()
-                country_stats.columns = ['Country', 'Total', 'Average', 'Median', 'Count', 'Std Dev']
-                country_stats = country_stats.sort_values('Total', ascending=False)
-                country_stats['Total'] = country_stats['Total'].apply(lambda x: f"€{x:,.2f}")
-                country_stats['Average'] = country_stats['Average'].apply(lambda x: f"€{x:,.2f}")
-                country_stats['Median'] = country_stats['Median'].apply(lambda x: f"€{x:,.2f}")
-                country_stats['Std Dev'] = country_stats['Std Dev'].apply(lambda x: f"€{x:,.2f}")
-                
-                st.dataframe(country_stats, use_container_width=True, hide_index=True)
-            
-            # Row 5: Timeline Visualization
-            st.markdown("### 📅 Country Timeline & Spending")
-            if len(filtered_df) > 0 and 'Country' in filtered_df.columns:
-                timeline_df = filtered_df[filtered_df['Amount'] < 0].copy() if len(filtered_df[filtered_df['Amount'] < 0]) > 0 else filtered_df.copy()
-                timeline_df['YearMonth'] = timeline_df['Date'].dt.to_period('M').astype(str)
-                
-                # Create stacked area chart showing country presence over time
-                country_timeline = timeline_df.groupby(['YearMonth', 'Country']).size().reset_index(name='Transaction_Count')
-                
-                fig_timeline = px.area(
-                    country_timeline,
-                    x='YearMonth',
-                    y='Transaction_Count',
-                    color='Country',
-                    title="Country Presence Timeline (Transaction Count)",
-                    labels={'Transaction_Count': 'Number of Transactions', 'YearMonth': 'Month'},
-                    color_discrete_sequence=px.colors.qualitative.Set2
-                )
-                fig_timeline.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    hovermode='x unified',
-                    xaxis_tickangle=-45
-                )
-                st.plotly_chart(fig_timeline, use_container_width=True)
-    
-    with tab5:
-        # Deep Dive Tab - Detailed Analysis
-        st.subheader("🔍 Detailed Analysis")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📊 Spending Statistics")
-            if len(expenses_df) > 0:
-                stats_data = {
-                    'Metric': [
-                        'Total Expenses',
-                        'Average Transaction',
-                        'Median Transaction',
-                        'Largest Single Expense',
-                        'Smallest Expense',
-                        'Standard Deviation',
-                        'Total Transactions'
-                    ],
-                    'Value': [
-                        f"€{total_expenses:,.2f}",
-                        f"€{expenses_df['Amount_Abs'].mean():,.2f}",
-                        f"€{expenses_df['Amount_Abs'].median():,.2f}",
-                        f"€{expenses_df['Amount_Abs'].max():,.2f}",
-                        f"€{expenses_df['Amount_Abs'].min():,.2f}",
-                        f"€{expenses_df['Amount_Abs'].std():,.2f}",
-                        f"{len(expenses_df)}"
-                    ]
-                }
-                stats_df = pd.DataFrame(stats_data)
-                st.dataframe(stats_df, use_container_width=True, hide_index=True)
+                    st.plotly_chart(fig_parallel, use_container_width=True, key="parallel_coords")
         
         with col2:
-            st.markdown("### 💰 Income Statistics")
-            if len(income_df) > 0:
-                income_stats_data = {
-                    'Metric': [
-                        'Total Income',
-                        'Average Income Transaction',
-                        'Median Income Transaction',
-                        'Largest Single Income',
-                        'Smallest Income',
-                        'Standard Deviation',
-                        'Total Income Transactions'
-                    ],
-                    'Value': [
-                        f"€{total_income:,.2f}",
-                        f"€{income_df['Amount'].mean():,.2f}",
-                        f"€{income_df['Amount'].median():,.2f}",
-                        f"€{income_df['Amount'].max():,.2f}",
-                        f"€{income_df['Amount'].min():,.2f}",
-                        f"€{income_df['Amount'].std():,.2f}",
-                        f"{len(income_df)}"
-                    ]
-                }
-                income_stats_df = pd.DataFrame(income_stats_data)
-                st.dataframe(income_stats_df, use_container_width=True, hide_index=True)
-        
-        # Category Breakdown Table
-        st.subheader("📋 Detailed Category Breakdown")
-        if len(expenses_df) > 0:
-            category_breakdown = expenses_df.groupby('Merchant_Category').agg({
-                'Amount_Abs': ['sum', 'mean', 'count', 'min', 'max']
-            }).reset_index()
-            category_breakdown.columns = ['Category', 'Total', 'Average', 'Count', 'Min', 'Max']
-            category_breakdown = category_breakdown.sort_values('Total', ascending=False)
-            category_breakdown['Total'] = category_breakdown['Total'].apply(lambda x: f"€{x:,.2f}")
-            category_breakdown['Average'] = category_breakdown['Average'].apply(lambda x: f"€{x:,.2f}")
-            category_breakdown['Min'] = category_breakdown['Min'].apply(lambda x: f"€{x:,.2f}")
-            category_breakdown['Max'] = category_breakdown['Max'].apply(lambda x: f"€{x:,.2f}")
-            
-            st.dataframe(category_breakdown, use_container_width=True, hide_index=True)
-        
-        # Transaction table
-        st.subheader("📋 Recent Transactions")
-        
-        if len(filtered_df) > 0:
-            num_rows = 50  # Fixed number of recent transactions to display
-            # Ensure Date column exists and is datetime
-            if 'Date' not in filtered_df.columns:
-                filtered_df['Date'] = pd.to_datetime(filtered_df[['Year', 'Month', 'Day']])
-            
-            display_df = filtered_df.sort_values('Date', ascending=False).head(num_rows).copy()
-            
-            # Select columns that exist
-            available_cols = ['Date', 'Type', 'Product', 'Merchant_Category', 'Amount', 'Balance']
-            if 'Country' in display_df.columns:
-                available_cols.insert(4, 'Country')
-            if 'City' in display_df.columns:
-                available_cols.insert(5, 'City')
-            
-            display_df = display_df[[col for col in available_cols if col in display_df.columns]].copy()
-            
-            # Format Date column
-            if 'Date' in display_df.columns:
-                display_df['Date'] = pd.to_datetime(display_df['Date']).dt.strftime('%Y-%m-%d')
-            
-            # Format Amount and Balance
-            if 'Amount' in display_df.columns:
-                display_df['Amount'] = display_df['Amount'].apply(lambda x: f"€{float(x):,.2f}" if pd.notna(x) else "€0.00")
-            if 'Balance' in display_df.columns:
-                display_df['Balance'] = display_df['Balance'].apply(lambda x: f"€{float(x):,.2f}" if pd.notna(x) else "€0.00")
-            
-            st.dataframe(display_df, use_container_width=True, hide_index=True, height=400)
-        else:
-            st.info("No transactions available for the selected filters.")
-        
-        # Download button
-        csv = filtered_df.to_csv(index=False)
-        st.download_button(
-            label="📥 Download Filtered Data as CSV",
-            data=csv,
-            file_name=f"filtered_transactions_{selected_year}_{selected_product}_{selected_type}.csv",
-            mime="text/csv"
-        )
-    
-    with tab6:
-        # Advanced Visuals Tab
-        st.subheader("🎨 Advanced Visualizations")
-        
-        # Row 1: Box plots and Violin plots
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📦 Transaction Amount Distribution by Category")
-            if len(expenses_df) > 0:
-                top_cats = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(8).index
-                expenses_filtered = expenses_df[expenses_df['Merchant_Category'].isin(top_cats)]
-                fig_box = px.box(
-                    expenses_filtered,
-                    x='Merchant_Category',
-                    y='Amount_Abs',
-                    title="Transaction Amount Distribution (Top 8 Categories)",
-                    labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
-                    color='Merchant_Category'
-                )
-                fig_box.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    xaxis_tickangle=-45,
-                    showlegend=False
-                )
-                st.plotly_chart(fig_box, use_container_width=True)
-            
-            st.markdown("### 🎯 Scatter: Transaction Size vs Balance")
-            if len(filtered_df) > 0:
-                scatter_df = filtered_df[filtered_df['Amount'] != 0].copy()
-                scatter_df['Transaction_Type'] = scatter_df['Amount'].apply(lambda x: 'Income' if x > 0 else 'Expense')
-                fig_scatter = px.scatter(
-                    scatter_df.head(500),  # Limit for performance
-                    x='Amount_Abs',
-                    y='Balance',
-                    color='Transaction_Type',
-                    size='Amount_Abs',
-                    hover_data=['Merchant_Category', 'Date'],
-                    title="Transaction Size vs Account Balance",
-                    labels={'Amount_Abs': 'Transaction Amount (€)', 'Balance': 'Account Balance (€)'},
-                    color_discrete_map={'Income': '#10b981', 'Expense': '#ef4444'}
-                )
-                fig_scatter.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_scatter, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 🎻 Violin Plot: Spending Distribution")
-            if len(expenses_df) > 0:
-                top_cats_violin = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(6).index
-                expenses_violin = expenses_df[expenses_df['Merchant_Category'].isin(top_cats_violin)]
-                fig_violin = px.violin(
-                    expenses_violin,
-                    x='Merchant_Category',
-                    y='Amount_Abs',
-                    title="Spending Distribution (Violin Plot)",
-                    labels={'Amount_Abs': 'Amount (€)', 'Merchant_Category': 'Category'},
-                    color='Merchant_Category',
-                    box=True
-                )
-                fig_violin.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    xaxis_tickangle=-45,
-                    showlegend=False
-                )
-                st.plotly_chart(fig_violin, use_container_width=True)
-            
-            st.markdown("### 📊 Funnel Chart: Transaction Flow")
+            st.markdown("#### Transaction Type Funnel")
             if len(filtered_df) > 0:
                 funnel_data = {
                     'Stage': ['Total Transactions', 'Card Payments', 'Transfers', 'Topups', 'Other'],
@@ -1214,412 +1820,460 @@ if df is not None:
                     funnel_df,
                     x='Count',
                     y='Stage',
-                    title="Transaction Type Funnel",
+                    title="",
                     labels={'Count': 'Number of Transactions', 'Stage': 'Transaction Type'}
                 )
+                fig_funnel.update_traces(marker_color=colors['primary'])
                 fig_funnel.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_funnel, use_container_width=True)
-        
-        # Row 2: Sunburst and Treemap
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### ☀️ Sunburst: Product → Category → Type")
-            if len(filtered_df) > 0:
-                sunburst_data = filtered_df.groupby(['Product', 'Merchant_Category', 'Type']).size().reset_index(name='Count')
-                sunburst_data = sunburst_data[sunburst_data['Count'] > 0]
-                fig_sunburst = px.sunburst(
-                    sunburst_data,
-                    path=['Product', 'Merchant_Category', 'Type'],
-                    values='Count',
-                    title="Hierarchical View: Product → Category → Type",
-                    color='Count',
-                    color_continuous_scale='Viridis'
-                )
-                fig_sunburst.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_sunburst, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 🌳 Treemap: Category Spending")
-            if len(expenses_df) > 0:
-                treemap_data = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().reset_index()
-                treemap_data = treemap_data.sort_values('Amount_Abs', ascending=False)
-                fig_treemap = px.treemap(
-                    treemap_data,
-                    path=['Merchant_Category'],
-                    values='Amount_Abs',
-                    title="Spending Treemap by Category",
-                    color='Amount_Abs',
-                    color_continuous_scale='Reds'
-                )
-                fig_treemap.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_treemap, use_container_width=True)
-        
-        # Row 3: Waterfall and Gauge
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 💧 Waterfall: Monthly Net Flow")
-            if len(monthly_summary) > 0:
-                waterfall_data = monthly_summary.copy()
-                waterfall_data['Net_Flow'] = waterfall_data['Net']
-                fig_waterfall = go.Figure(go.Waterfall(
-                    name="Net Flow",
-                    orientation="v",
-                    measure=["relative"] * (len(waterfall_data) - 1) + ["total"],
-                    x=waterfall_data['Month'],
-                    textposition="outside",
-                    text=waterfall_data['Net_Flow'].apply(lambda x: f"€{x:,.0f}"),
-                    y=waterfall_data['Net_Flow'],
-                    connector={"line": {"color": "rgb(63, 63, 63)"}},
-                ))
-                fig_waterfall.update_layout(
-                    title="Monthly Net Flow Waterfall Chart",
-                    xaxis_title="Month",
-                    yaxis_title="Net Flow (€)",
-                    plot_bgcolor='rgba(0,0,0,0)',
                     paper_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False
+                    font_color='#ffffff',
+                    height=400,
+                    margin=dict(l=0, r=0, t=0, b=0),
+                    xaxis=dict(gridcolor='rgba(255,255,255,0.1)')
                 )
-                st.plotly_chart(fig_waterfall, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 🎚️ Gauge: Financial Health")
-            # Calculate financial health score (0-100)
-            if total_income > 0:
-                health_score = min(100, max(0, (savings_rate + 50)))  # Normalize to 0-100
-                fig_gauge = go.Figure(go.Indicator(
-                    mode="gauge+number+delta",
-                    value=health_score,
-                    domain={'x': [0, 1], 'y': [0, 1]},
-                    title={'text': "Financial Health Score"},
-                    delta={'reference': 50},
-                    gauge={
-                        'axis': {'range': [None, 100]},
-                        'bar': {'color': "darkblue"},
-                        'steps': [
-                            {'range': [0, 33], 'color': "lightgray"},
-                            {'range': [33, 66], 'color': "gray"},
-                            {'range': [66, 100], 'color': "lightgreen"}
-                        ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': 90
-                        }
-                    }
-                ))
-                fig_gauge.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    height=300
-                )
-                st.plotly_chart(fig_gauge, use_container_width=True)
-        
-        # Row 4: Radar/Spider and Parallel Coordinates
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 🕸️ Radar Chart: Spending by Day of Week")
-            if len(expenses_df) > 0:
-                weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-                weekday_spending = expenses_df.groupby('Weekday')['Amount_Abs'].sum().reset_index()
-                
-                # Ensure all weekdays are present
-                all_weekdays_df = pd.DataFrame({'Weekday': weekday_order})
-                weekday_spending = pd.merge(all_weekdays_df, weekday_spending, on='Weekday', how='left')
-                weekday_spending['Amount_Abs'] = weekday_spending['Amount_Abs'].fillna(0)
-                weekday_spending['Weekday'] = pd.Categorical(weekday_spending['Weekday'], categories=weekday_order, ordered=True)
-                weekday_spending = weekday_spending.sort_values('Weekday')
-                
-                # Normalize for radar chart
-                max_val = weekday_spending['Amount_Abs'].max()
-                if max_val > 0:
-                    weekday_spending['Normalized'] = (weekday_spending['Amount_Abs'] / max_val * 100)
-                else:
-                    weekday_spending['Normalized'] = 0
-                
-                fig_radar = go.Figure()
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=weekday_spending['Normalized'].tolist(),
-                    theta=weekday_spending['Weekday'].tolist(),
-                    fill='toself',
-                    name='Spending Pattern',
-                    line_color='#667eea'
-                ))
-                fig_radar.update_layout(
-                    polar=dict(
-                        radialaxis=dict(
-                            visible=True,
-                            range=[0, 100]
-                        )),
-                    showlegend=True,
-                    title="Spending Pattern by Day of Week (Radar)",
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_radar, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 📈 Parallel Coordinates: Multi-Dimensional Analysis")
-            if len(expenses_df) > 0:
-                # Sample data for parallel coordinates
-                parallel_data = expenses_df[['Amount_Abs', 'Hour', 'Weekday', 'Merchant_Category']].copy()
-                parallel_data = parallel_data.head(200)  # Limit for performance
-                
-                # Convert weekday to numeric
-                weekday_map = {'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 
-                              'Friday': 5, 'Saturday': 6, 'Sunday': 7}
-                parallel_data['Weekday_Num'] = parallel_data['Weekday'].map(weekday_map)
-                
-                # Get top categories
-                top_cats_parallel = parallel_data['Merchant_Category'].value_counts().head(5).index
-                parallel_data = parallel_data[parallel_data['Merchant_Category'].isin(top_cats_parallel)]
-                
-                fig_parallel = px.parallel_coordinates(
-                    parallel_data,
-                    color='Amount_Abs',
-                    dimensions=['Amount_Abs', 'Hour', 'Weekday_Num'],
-                    labels={'Amount_Abs': 'Amount', 'Hour': 'Hour', 'Weekday_Num': 'Day'},
-                    color_continuous_scale='Viridis',
-                    title="Multi-Dimensional Transaction Analysis"
-                )
-                fig_parallel.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_parallel, use_container_width=True)
-        
-        # Row 5: 3D Scatter and Surface
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 🌐 3D Scatter: Amount vs Hour vs Day")
-            if len(expenses_df) > 0:
-                scatter_3d_data = expenses_df.head(300).copy()  # Limit for performance
-                scatter_3d_data['Weekday_Num'] = scatter_3d_data['Weekday'].map(weekday_map)
-                
-                fig_3d = px.scatter_3d(
-                    scatter_3d_data,
-                    x='Hour',
-                    y='Weekday_Num',
-                    z='Amount_Abs',
-                    color='Merchant_Category',
-                    size='Amount_Abs',
-                    hover_data=['Date'],
-                    title="3D View: Spending Patterns",
-                    labels={'Hour': 'Hour of Day', 'Weekday_Num': 'Day of Week', 'Amount_Abs': 'Amount (€)'}
-                )
-                fig_3d.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    scene=dict(
-                        xaxis_title="Hour",
-                        yaxis_title="Day of Week",
-                        zaxis_title="Amount (€)"
-                    )
-                )
-                st.plotly_chart(fig_3d, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 📊 Histogram: Transaction Amount Distribution")
-            if len(filtered_df) > 0:
-                fig_hist = px.histogram(
-                    filtered_df,
-                    x='Amount_Abs',
-                    nbins=50,
-                    title="Distribution of Transaction Amounts",
-                    labels={'Amount_Abs': 'Transaction Amount (€)', 'count': 'Frequency'},
-                    color_discrete_sequence=['#667eea'],
-                    marginal="box"
-                )
-                fig_hist.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
-                st.plotly_chart(fig_hist, use_container_width=True)
-        
-        # Row 6: Additional visualizations
-        st.markdown("### 📉 Stacked Area: Category Trends Over Time")
-        if len(expenses_df) > 0:
-            expenses_df['YearMonth'] = expenses_df['Date'].dt.to_period('M').astype(str)
-            top_cats_area = expenses_df.groupby('Merchant_Category')['Amount_Abs'].sum().nlargest(6).index
-            area_data = expenses_df[expenses_df['Merchant_Category'].isin(top_cats_area)]
-            area_monthly = area_data.groupby(['YearMonth', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
-            
-            fig_area = px.area(
-                area_monthly,
-                x='YearMonth',
-                y='Amount_Abs',
-                color='Merchant_Category',
-                title="Stacked Area: Top 6 Categories Over Time",
-                labels={'Amount_Abs': 'Spending (€)', 'YearMonth': 'Month'},
-                color_discrete_sequence=px.colors.qualitative.Set3
-            )
-            fig_area.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                xaxis_tickangle=-45
-            )
-            st.plotly_chart(fig_area, use_container_width=True)
+                st.plotly_chart(fig_funnel, use_container_width=True, key="funnel_chart")
     
-    with tab7:
-        # World Map Tab
-        st.subheader("🗺️ World Map - Spending by Country")
+    with tab4:
+        st.markdown("## Location-Based Spending Analysis")
         
-        if 'Country' not in filtered_df.columns:
-            st.warning("⚠️ Country data not available. Please regenerate data with location information.")
-        else:
-            # Country to ISO code mapping
-            country_iso_map = {
-                'Belgium': 'BEL',
-                'Spain': 'ESP',
-                'Germany': 'DEU',
-                'France': 'FRA',
-                'Unknown': None
-            }
-            
-            # Prepare data for map
+        if 'Country' in filtered_df.columns and filtered_df['Country'].nunique() > 1:
+            # Location Overview Metrics
+            st.markdown("### Location Overview")
             if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
-                country_data = expenses_df.groupby('Country').agg({
+                country_metrics = expenses_df.groupby('Country').agg({
                     'Amount_Abs': ['sum', 'mean', 'count']
                 }).reset_index()
-                country_data.columns = ['Country', 'Total_Spending', 'Avg_Spending', 'Transaction_Count']
-                country_data['ISO_Code'] = country_data['Country'].map(country_iso_map)
-                country_data = country_data[country_data['ISO_Code'].notna()]  # Remove Unknown countries
+                country_metrics.columns = ['Country', 'Total_Spending', 'Avg_Transaction', 'Transaction_Count']
+                country_metrics = country_metrics.sort_values('Total_Spending', ascending=False)
                 
-                # Get city data for statistics
-                city_data = expenses_df.groupby(['Country', 'City']).agg({
-                    'Amount_Abs': 'sum'
-                }).reset_index()
-                city_data.columns = ['Country', 'City', 'Spending']
+                metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
                 
-                col1, col2 = st.columns([2, 1])
+                with metric_col1:
+                    total_countries = len(country_metrics)
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left: 4px solid #00f5ff;">
+                        <div class="metric-label">Countries Visited</div>
+                        <div class="metric-value">{total_countries}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-                with col1:
-                    # Choropleth map for country-level spending
-                    st.markdown("### 🌍 Spending by Country (Choropleth)")
-                    if len(country_data) > 0:
-                        fig_choropleth = go.Figure(data=go.Choropleth(
-                            locations=country_data['ISO_Code'],
-                            z=country_data['Total_Spending'],
-                            text=country_data['Country'],
-                            locationmode='ISO-3',
-                            colorscale='Reds',
-                            autocolorscale=False,
-                            reversescale=False,
-                            marker_line_color='darkgray',
-                            marker_line_width=0.5,
-                            colorbar_title="Total Spending (€)",
-                            hovertemplate='<b>%{text}</b><br>' +
-                                        'Total Spending: €%{z:,.2f}<br>' +
-                                        '<extra></extra>'
-                        ))
-                        
-                        fig_choropleth.update_geos(
-                            projection_type="natural earth",
-                            showcoastlines=True,
-                            coastlinecolor="LightGray",
+                with metric_col2:
+                    top_country = country_metrics.iloc[0]['Country'] if len(country_metrics) > 0 else 'N/A'
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left: 4px solid #00f5ff;">
+                        <div class="metric-label">Top Country</div>
+                        <div class="metric-value" style="font-size: 1.5rem;">{top_country}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with metric_col3:
+                    top_spending = country_metrics.iloc[0]['Total_Spending'] if len(country_metrics) > 0 else 0
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                        <div class="metric-label">Highest Spending</div>
+                        <div class="metric-value">€{top_spending:,.2f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with metric_col4:
+                    avg_per_country = country_metrics['Total_Spending'].mean() if len(country_metrics) > 0 else 0
+                    st.markdown(f"""
+                    <div class="metric-card" style="border-left: 4px solid #ff00ff;">
+                        <div class="metric-label">Avg per Country</div>
+                        <div class="metric-value">€{avg_per_country:,.2f}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # World Map Visualization
+            st.markdown("### World Map: Spending by Country")
+            if len(expenses_df) > 0 and 'Country' in expenses_df.columns:
+                country_spending_map = expenses_df.groupby('Country')['Amount_Abs'].sum().reset_index()
+                country_spending_map.columns = ['Country', 'Spending']
+                
+                # Country name to ISO code mapping (common countries)
+                country_to_iso = {
+                    'France': 'FRA',
+                    'United States': 'USA',
+                    'United Kingdom': 'GBR',
+                    'Germany': 'DEU',
+                    'Spain': 'ESP',
+                    'Italy': 'ITA',
+                    'Netherlands': 'NLD',
+                    'Belgium': 'BEL',
+                    'Switzerland': 'CHE',
+                    'Portugal': 'PRT',
+                    'Austria': 'AUT',
+                    'Poland': 'POL',
+                    'Sweden': 'SWE',
+                    'Denmark': 'DNK',
+                    'Norway': 'NOR',
+                    'Finland': 'FIN',
+                    'Ireland': 'IRL',
+                    'Greece': 'GRC',
+                    'Czech Republic': 'CZE',
+                    'Romania': 'ROU',
+                    'Hungary': 'HUN',
+                    'Canada': 'CAN',
+                    'Australia': 'AUS',
+                    'Japan': 'JPN',
+                    'China': 'CHN',
+                    'India': 'IND',
+                    'Brazil': 'BRA',
+                    'Mexico': 'MEX',
+                    'Argentina': 'ARG',
+                    'South Korea': 'KOR',
+                    'Singapore': 'SGP',
+                    'Thailand': 'THA',
+                    'Indonesia': 'IDN',
+                    'Malaysia': 'MYS',
+                    'Philippines': 'PHL',
+                    'Vietnam': 'VNM',
+                    'New Zealand': 'NZL',
+                    'South Africa': 'ZAF',
+                    'Turkey': 'TUR',
+                    'Israel': 'ISR',
+                    'United Arab Emirates': 'ARE',
+                    'Saudi Arabia': 'SAU',
+                    'Egypt': 'EGY',
+                    'Morocco': 'MAR',
+                    'Tunisia': 'TUN',
+                    'Algeria': 'DZA',
+                    'Russia': 'RUS',
+                    'Ukraine': 'UKR',
+                    'Croatia': 'HRV',
+                    'Serbia': 'SRB',
+                    'Bulgaria': 'BGR',
+                    'Slovakia': 'SVK',
+                    'Slovenia': 'SVN',
+                    'Estonia': 'EST',
+                    'Latvia': 'LVA',
+                    'Lithuania': 'LTU',
+                    'Luxembourg': 'LUX',
+                    'Iceland': 'ISL',
+                    'Cyprus': 'CYP',
+                    'Malta': 'MLT'
+                }
+                
+                # Add ISO codes
+                country_spending_map['ISO'] = country_spending_map['Country'].map(country_to_iso)
+                country_spending_map = country_spending_map.dropna(subset=['ISO'])
+                
+                if len(country_spending_map) > 0:
+                    fig_map = px.choropleth(
+                        country_spending_map,
+                        locations='ISO',
+                        color='Spending',
+                        hover_name='Country',
+                        hover_data={'ISO': False, 'Spending': ':,.2f'},
+                        color_continuous_scale='Plasma',
+                        title="",
+                        labels={'Spending': 'Spending (€)'}
+                    )
+                    fig_map.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        geo=dict(
+                            bgcolor='rgba(0,0,0,0)',
+                            lakecolor='rgba(0,0,0,0)',
+                            landcolor='rgba(255,255,255,0.1)',
+                            showlakes=False,
                             showland=True,
-                            landcolor="White",
                             showocean=True,
-                            oceancolor="LightBlue",
-                            showlakes=True,
-                            lakecolor="LightBlue",
-                            showrivers=True,
-                            rivercolor="LightBlue",
-                            center=dict(lon=10, lat=50),  # Center on Europe
-                            projection_scale=4,  # Zoom in on Europe
-                            lonaxis_range=[-10, 40],  # Europe longitude range
-                            lataxis_range=[35, 70]   # Europe latitude range
-                        )
-                        
-                        fig_choropleth.update_layout(
-                            title_text='Total Spending by Country - Europe Focus',
-                            geo=dict(
-                                showframe=False,
-                                showcoastlines=True,
-                                projection_type='natural earth',
-                                center=dict(lon=10, lat=50),
-                                projection_scale=4,
-                                lonaxis_range=[-10, 40],
-                                lataxis_range=[35, 70]
-                            ),
-                            height=600,
-                            margin=dict(l=0, r=0, t=50, b=0)
-                        )
-                        
-                        st.plotly_chart(fig_choropleth, use_container_width=True)
-                    else:
-                        st.warning("No country data available for mapping.")
+                            oceancolor='rgba(0,0,0,0.3)',
+                            projection_type='natural earth'
+                        ),
+                        height=500,
+                        margin=dict(l=0, r=0, t=0, b=0)
+                    )
+                    fig_map.update_geos(
+                        showcountries=True,
+                        countrycolor='rgba(255,255,255,0.3)',
+                        showcoastlines=True,
+                        coastlinecolor='rgba(255,255,255,0.2)'
+                    )
+                    st.plotly_chart(fig_map, use_container_width=True, key="world_map")
+                else:
+                    st.info("Country data not available in ISO format for world map visualization.")
+            
+            # Country Comparison
+            st.markdown("### Country Comparison")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Total Spending by Country")
+                if len(expenses_df) > 0:
+                    country_spending = expenses_df.groupby('Country')['Amount_Abs'].sum().reset_index()
+                    country_spending = country_spending.sort_values('Amount_Abs', ascending=False)
+                    
+                    fig_country = px.bar(
+                        country_spending,
+                        x='Country',
+                        y='Amount_Abs',
+                        title="",
+                        labels={'Amount_Abs': 'Spending (€)', 'Country': 'Country'},
+                        color='Amount_Abs',
+                        color_continuous_scale='Plasma',
+                        text='Amount_Abs'
+                    )
+                    fig_country.update_traces(
+                        texttemplate='€%{text:,.0f}',
+                        textposition='outside',
+                        textfont=dict(color='#ffffff', size=11)
+                    )
+                    fig_country.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        showlegend=False,
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                    )
+                    st.plotly_chart(fig_country, use_container_width=True, key="country_bar")
+        
+            with col2:
+                st.markdown("#### Average Transaction by Country")
+                if len(expenses_df) > 0:
+                    country_avg = expenses_df.groupby('Country').agg({
+                        'Amount_Abs': ['mean', 'count']
+                    }).reset_index()
+                    country_avg.columns = ['Country', 'Avg_Amount', 'Count']
+                    country_avg = country_avg[country_avg['Count'] >= 3]  # At least 3 transactions
+                    country_avg = country_avg.sort_values('Avg_Amount', ascending=False)
+                    
+                    fig_avg = px.bar(
+                        country_avg,
+                        x='Country',
+                        y='Avg_Amount',
+                        title="",
+                        labels={'Avg_Amount': 'Average Amount (€)', 'Country': 'Country'},
+                        color='Avg_Amount',
+                        color_continuous_scale='Plasma',
+                        text='Avg_Amount'
+                    )
+                    fig_avg.update_traces(
+                        texttemplate='€%{text:,.0f}',
+                        textposition='outside',
+                        textfont=dict(color='#ffffff', size=11)
+                    )
+                    fig_avg.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        showlegend=False,
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                    )
+                    st.plotly_chart(fig_avg, use_container_width=True, key="country_avg")
+            
+            # Monthly trends by country
+            st.markdown("### Monthly Spending Trends by Country")
+            if len(expenses_df) > 0 and 'Date' in expenses_df.columns and 'Country' in expenses_df.columns:
+                expenses_df_copy = expenses_df.copy()
+                expenses_df_copy['YearMonth'] = expenses_df_copy['Date'].dt.to_period('M').astype(str)
+                country_monthly = expenses_df_copy.groupby(['YearMonth', 'Country'])['Amount_Abs'].sum().reset_index()
                 
-                with col2:
-                    st.markdown("### 📊 Country Statistics")
-                    st.dataframe(
-                        country_data[['Country', 'Total_Spending', 'Avg_Spending', 'Transaction_Count']].round(2),
-                        use_container_width=True,
-                        hide_index=True
+                if len(country_monthly) > 0:
+                    fig_country_trend = px.line(
+                        country_monthly,
+                        x='YearMonth',
+                        y='Amount_Abs',
+                        color='Country',
+                        title="",
+                        labels={'Amount_Abs': 'Spending (€)', 'YearMonth': 'Month'},
+                        markers=True,
+                        color_discrete_sequence=vibrant_colors
                     )
-                    
-                    st.markdown("### 🏙️ City Statistics")
-                    city_stats = city_data[['City', 'Country', 'Spending']].copy()
-                    city_stats = city_stats.sort_values('Spending', ascending=False)
-                    city_stats['Spending'] = city_stats['Spending'].apply(lambda x: f"€{x:,.2f}")
-                    st.dataframe(
-                        city_stats,
-                        use_container_width=True,
-                        hide_index=True
+                    fig_country_trend.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        hovermode='x unified',
+                        height=450,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+                        legend=dict(font=dict(color='#ffffff', size=11))
                     )
+                    st.plotly_chart(fig_country_trend, use_container_width=True, key="country_trends")
+                else:
+                    st.info("No country trend data available.")
+            
+            # City Analysis
+            if 'City' in expenses_df.columns and expenses_df['City'].nunique() > 1:
+                st.markdown("### City-Level Analysis")
+                col3, col4 = st.columns(2)
+                
+                with col3:
+                    st.markdown("#### Spending by City")
+                    city_spending = expenses_df.groupby('City')['Amount_Abs'].sum().reset_index()
+                    city_spending = city_spending.sort_values('Amount_Abs', ascending=False).head(10)
                     
-                    # Map legend/info
-                    st.markdown("### ℹ️ Map Information")
-                    st.info("""
-                    **Choropleth Map**: Shows total spending by country with color intensity. 
-                    Darker colors indicate higher spending amounts.
-                    
-                    **Interactivity**: 
-                    - Hover over countries for detailed spending information
-                    - Zoom and pan to explore the map
-                    - Color scale shows spending intensity
-                    """)
+                    fig_city = px.bar(
+                        city_spending,
+                        x='City',
+                        y='Amount_Abs',
+                        title="",
+                        labels={'Amount_Abs': 'Spending (€)', 'City': 'City'},
+                        color='Amount_Abs',
+                        color_continuous_scale='Plasma',
+                        text='Amount_Abs'
+                    )
+                    fig_city.update_traces(
+                        texttemplate='€%{text:,.0f}',
+                        textposition='outside',
+                        textfont=dict(color='#ffffff', size=10)
+                    )
+                    fig_city.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font_color='#ffffff',
+                        height=400,
+                        margin=dict(l=0, r=0, t=0, b=0),
+                        showlegend=False,
+                        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', tickangle=-45),
+                        yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
+                    )
+                    st.plotly_chart(fig_city, use_container_width=True, key="city_bar")
+                
+                with col4:
+                    st.markdown("#### Category Spending by Country")
+        if len(expenses_df) > 0:
+                        heatmap_country = expenses_df.groupby(['Country', 'Merchant_Category'])['Amount_Abs'].sum().reset_index()
+                        heatmap_pivot = heatmap_country.pivot(index='Merchant_Category', columns='Country', values='Amount_Abs').fillna(0)
+                        
+                        if len(heatmap_pivot) > 0:
+                            fig_heatmap_country = px.imshow(
+                                heatmap_pivot,
+                                labels=dict(x="Country", y="Category", color="Spending (€)"),
+                                title="",
+                                color_continuous_scale='Plasma',
+                                aspect="auto"
+                            )
+                            fig_heatmap_country.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                                font_color='#ffffff',
+                                height=400,
+                                margin=dict(l=0, r=0, t=0, b=0)
+                            )
+                            st.plotly_chart(fig_heatmap_country, use_container_width=True, key="heatmap_country_category")
+        else:
+            st.info("Location data not available for the selected filters.")
+    
+    with tab5:
+        st.markdown("## Transaction Details")
+        
+        search_term = st.text_input("Search transactions", placeholder="Search by merchant, category, or description...")
+        
+        display_df = filtered_df.copy()
+        if search_term and len(display_df) > 0:
+            if 'Description_Anon' in display_df.columns and 'Merchant_Category' in display_df.columns:
+                display_df = display_df[
+                    display_df['Description_Anon'].str.contains(search_term, case=False, na=False) |
+                    display_df['Merchant_Category'].str.contains(search_term, case=False, na=False)
+                ]
+        
+        if len(display_df) > 0:
+            required_cols = ['Date', 'Type', 'Merchant_Category', 'Description_Anon', 'Amount', 'Balance']
+            available_cols = [col for col in required_cols if col in display_df.columns]
+            
+            if len(available_cols) > 0:
+                display_df = display_df[available_cols].copy()
+                if 'Date' in display_df.columns:
+                    display_df = display_df.sort_values('Date', ascending=False)
+                    display_df['Date'] = pd.to_datetime(display_df['Date']).dt.strftime('%Y-%m-%d')
+                if 'Amount' in display_df.columns:
+                    display_df['Amount'] = display_df['Amount'].apply(lambda x: f"€{float(x):,.2f}" if pd.notna(x) else "€0.00")
+                if 'Balance' in display_df.columns:
+                    display_df['Balance'] = display_df['Balance'].apply(lambda x: f"€{float(x):,.2f}" if pd.notna(x) else "€0.00")
+                
+                    st.dataframe(
+                    display_df,
+                        use_container_width=True,
+                    hide_index=True,
+                    height=600
+                )
+                
+                csv = display_df.to_csv(index=False)
+                st.download_button(
+                    label="Download Filtered Data",
+                    data=csv,
+                    file_name=f"transactions_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
             else:
-                st.info("No expense data available for selected filters.")
+                st.info("No transaction data available.")
+        else:
+            st.info("No transactions found matching your search criteria.")
     
-    st.divider()
-    
-    # Summary Statistics
-    st.subheader("📊 Summary Statistics")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Transactions", len(filtered_df))
-        st.metric("Average Transaction", f"€{avg_transaction:,.2f}")
-    
-    with col2:
-        largest_income = filtered_df[filtered_df['Amount'] > 0]['Amount'].max() if len(filtered_df[filtered_df['Amount'] > 0]) > 0 else 0
-        largest_expense = filtered_df[filtered_df['Amount'] < 0]['Amount_Abs'].max() if len(filtered_df[filtered_df['Amount'] < 0]) > 0 else 0
-        st.metric("Largest Income", f"€{largest_income:,.2f}" if largest_income > 0 else "€0.00")
-        st.metric("Largest Expense", f"€{largest_expense:,.2f}" if largest_expense > 0 else "€0.00")
-    
-    with col3:
-        most_active_category = filtered_df['Merchant_Category'].mode()[0] if len(filtered_df['Merchant_Category'].mode()) > 0 else "N/A"
-        most_common_type = filtered_df['Type'].mode()[0] if len(filtered_df['Type'].mode()) > 0 else "N/A"
-        st.metric("Most Active Category", most_active_category)
-        st.metric("Most Common Type", most_common_type)
-    
-    with col4:
-        date_range_days = (filtered_df['Date'].max() - filtered_df['Date'].min()).days if len(filtered_df) > 0 else 0
-        st.metric("Date Range", f"{date_range_days} days")
-        st.metric("Transactions/Day", f"{num_transactions/max(date_range_days, 1):.2f}")
+    with tab6:
+        st.markdown("## Methodology & Design")
+        
+        st.markdown("""
+        ### Project Overview
+        
+        This dashboard visualizes personal financial transaction data to help users understand spending patterns, 
+        income trends, and financial health. The target audience is individuals seeking to make informed financial decisions.
+        
+        ### Research Questions
+        
+        1. What is my current financial status? (Balance, income vs expenses, savings rate)
+        2. Where and when do I spend money? (Categories, locations, time patterns)
+        3. Am I staying within my budget? (Monthly spending vs budget)
+        4. How are my finances changing over time? (Monthly trends, category evolution)
+        5. How does my spending vary by location? (Country/city analysis)
+        
+        ### Data Structure
+        
+        **Key Variables**:
+        - Temporal: Date, Year, Month, Day, Weekday, Hour
+        - Financial: Amount, Balance, Amount_Abs
+        - Categorical: Type, Product, Merchant_Category
+        - Geographic: Country, City
+        - Descriptive: Description_Anon
+        
+        ### Visual Design Choices
+        
+        **Color Scheme**: Dark theme with vibrant neon accents (cyan, magenta, gold) for high contrast and modern appeal.
+        Colors follow financial conventions: cyan for income/positive, magenta for expenses/negative.
+        
+        **Visual Encodings**:
+        - Area charts for balance trends (shows cumulative nature)
+        - Grouped bar charts for income vs expenses (direct comparison)
+        - Pie charts for category distribution (part-to-whole relationships)
+        - Heatmaps for temporal patterns (day × hour spending)
+        - Line charts for trends over time
+        
+        **Layout**: Wide layout maximizes horizontal space. Sidebar for filters, main area for visualizations.
+        Tabbed interface organizes content logically.
+        
+        ### Interactions
+        
+        - Date range picker, year, account type, transaction type, category filters
+        - Budget setting
+        - Text search for transactions
+        - Interactive charts (zoom, pan, hover via Plotly)
+        - CSV export
+        
+        ### Tool Choice
+        
+        **Streamlit + Plotly**: Rapid development with Python, built-in components, easy deployment, 
+        and publication-quality interactive visualizations. Good balance between expressivity and development speed.
+        
+        ### Limitations
+        
+        1. Limited to transaction-level data (no investments, assets, projections)
+        2. Requires manual data export (not connected to live banking APIs)
+        3. Basic budget tracking (no category-specific budgets)
+        4. Location data may be incomplete for online transactions
+        5. No benchmarking or forecasting capabilities
+        """)
 
 else:
-    st.error("Unable to load data. Please check if the data file exists in the current directory.")
+    st.error("Unable to load data. Please check if the data file exists.")
