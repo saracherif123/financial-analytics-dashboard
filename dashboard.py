@@ -19,7 +19,7 @@ st.set_page_config(
     page_title="Financial Analytics Dashboard",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Modern Dark Theme CSS with Vibrant Accents
@@ -34,32 +34,8 @@ st.markdown("""
     .stApp > header {display: none !important; visibility: hidden !important; height: 0 !important;}
     section[data-testid="stHeader"] {display: none !important; visibility: hidden !important; height: 0 !important;}
     
-    /* Ensure custom toggle button is ALWAYS visible - Safari compatible */
-    #custom-sidebar-toggle-btn {
-        display: flex !important;
-        visibility: visible !important;
-        position: fixed !important;
-        top: 1rem !important;
-        left: 1rem !important;
-        z-index: 999999 !important;
-        width: 50px !important;
-        height: 50px !important;
-        background: rgba(0, 245, 255, 0.9) !important;
-        border: 3px solid #00f5ff !important;
-        border-radius: 8px !important;
-        -webkit-border-radius: 8px !important;
-        color: #fff !important;
-        font-size: 28px !important;
-        cursor: pointer !important;
-        -webkit-cursor: pointer !important;
-        box-shadow: 0 4px 20px rgba(0, 245, 255, 0.6) !important;
-        -webkit-box-shadow: 0 4px 20px rgba(0, 245, 255, 0.6) !important;
-        align-items: center !important;
-        justify-content: center !important;
-        pointer-events: auto !important;
-        -webkit-appearance: none !important;
-        -webkit-tap-highlight-color: transparent !important;
-    }
+    /* Hide the previous floating custom toggle button (kept for backward compatibility) */
+    #custom-sidebar-toggle-btn { display: none !important; visibility: hidden !important; }
     
     /* Ensure sidebar toggle button is ALWAYS visible and clickable - for collapsed sidebar */
     [data-testid="collapsedControl"],
@@ -699,6 +675,16 @@ st.markdown("""
         background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 100%);
         border-radius: 5px;
     }
+
+    /* When sidebar is open, make main content non-interactive so sidebar inputs are clickable */
+    .sidebar-open [data-testid="stAppViewContainer"],
+    .sidebar-open .main {
+        pointer-events: none !important;
+        -webkit-pointer-events: none !important;
+    }
+
+    /* Ensure any (legacy) custom toggle remains non-intrusive */
+    #custom-sidebar-toggle-btn { pointer-events: none !important; z-index: 0 !important; }
     
     /* Info boxes */
     .stInfo {
@@ -787,10 +773,7 @@ if df is not None:
     function ensureSidebarVisible() {
         const sidebar = document.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
-            // Force sidebar to be visible - works in both browsers
-            sidebar.style.setProperty('visibility', 'visible', 'important');
-            sidebar.style.setProperty('display', 'block', 'important');
-            sidebar.style.setProperty('opacity', '1', 'important');
+            // Apply layout properties but respect the aria-expanded collapsed state
             sidebar.style.setProperty('position', 'fixed', 'important');
             sidebar.style.setProperty('left', '0', 'important');
             sidebar.style.setProperty('top', '0', 'important');
@@ -800,18 +783,28 @@ if df is not None:
             sidebar.style.setProperty('z-index', '999', 'important');
             sidebar.style.setProperty('background', 'rgba(15, 12, 41, 0.95)', 'important');
             sidebar.style.setProperty('overflow-y', 'auto', 'important');
-            
-            // Set transform based on state
+
+            // Respect collapsed/expanded state
             const isCollapsed = sidebar.getAttribute('aria-expanded') === 'false';
-            if (!isCollapsed) {
-                sidebar.style.setProperty('transform', 'translateX(0)', 'important');
-                sidebar.style.setProperty('-webkit-transform', 'translateX(0)', 'important');
-                if (!sidebar.getAttribute('aria-expanded') || sidebar.getAttribute('aria-expanded') === '') {
-                    sidebar.setAttribute('aria-expanded', 'true');
-                }
-            } else {
+            if (isCollapsed) {
                 sidebar.style.setProperty('transform', 'translateX(-100%)', 'important');
                 sidebar.style.setProperty('-webkit-transform', 'translateX(-100%)', 'important');
+                sidebar.style.setProperty('visibility', 'hidden', 'important');
+                sidebar.style.setProperty('display', 'none', 'important');
+                sidebar.style.setProperty('opacity', '0', 'important');
+                sidebar.style.setProperty('pointer-events', 'none', 'important');
+                sidebar.style.setProperty('z-index', '0', 'important');
+                try { document.body.classList.remove('sidebar-open'); } catch(e){}
+            } else {
+                sidebar.style.setProperty('transform', 'translateX(0)', 'important');
+                sidebar.style.setProperty('-webkit-transform', 'translateX(0)', 'important');
+                sidebar.style.setProperty('visibility', 'visible', 'important');
+                sidebar.style.setProperty('display', 'block', 'important');
+                sidebar.style.setProperty('opacity', '1', 'important');
+                sidebar.style.setProperty('pointer-events', 'auto', 'important');
+                // Ensure sidebar is above other elements so inputs are clickable
+                sidebar.style.setProperty('z-index', '1000000', 'important');
+                try { document.body.classList.add('sidebar-open'); } catch(e){}
             }
         } else {
             console.log('Sidebar element not found in DOM!');
@@ -827,7 +820,8 @@ if df is not None:
         btn.innerHTML = '☰';
         btn.setAttribute('aria-label', 'Toggle sidebar');
         btn.setAttribute('type', 'button');
-        btn.style.cssText = 'position:fixed!important;top:1rem!important;left:1rem!important;z-index:999999!important;width:50px!important;height:50px!important;background:rgba(0,245,255,0.9)!important;border:3px solid #00f5ff!important;border-radius:8px!important;color:#fff!important;font-size:28px!important;cursor:pointer!important;box-shadow:0 4px 20px rgba(0,245,255,0.6)!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:auto!important;';
+        // Move toggle to the right and make it slightly smaller for a cleaner look
+        btn.style.cssText = 'position:fixed!important;top:1rem!important;right:1rem!important;z-index:999999!important;width:40px!important;height:40px!important;background:rgba(0,200,180,0.95)!important;border:2px solid #00f5ff!important;border-radius:6px!important;color:#fff!important;font-size:20px!important;cursor:pointer!important;box-shadow:0 6px 18px rgba(0,0,0,0.25)!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:auto!important;';
         
         btn.onclick = function(e) {
             e.preventDefault();
@@ -848,12 +842,16 @@ if df is not None:
                     sidebar.style.transform = 'translateX(-100%)';
                     sidebar.style.webkitTransform = 'translateX(-100%)';
                     sidebar.setAttribute('aria-expanded', 'false');
+                    // remove open class so main becomes interactive again
+                    try { document.body.classList.remove('sidebar-open'); } catch(e){}
                 } else {
                     sidebar.style.transform = 'translateX(0)';
                     sidebar.style.webkitTransform = 'translateX(0)';
                     sidebar.style.visibility = 'visible';
                     sidebar.style.display = 'block';
                     sidebar.setAttribute('aria-expanded', 'true');
+                    // mark body so main content becomes non-interactive
+                    try { document.body.classList.add('sidebar-open'); } catch(e){}
                 }
             }
         };
@@ -866,6 +864,19 @@ if df is not None:
     
     function init() {
         console.log('Initializing sidebar...');
+        // If no explicit aria-expanded state exists, default to collapsed
+        const sidebar = document.querySelector('[data-testid="stSidebar"]');
+        if (sidebar) {
+            const attr = sidebar.getAttribute('aria-expanded');
+            if (attr === null || attr === undefined || attr === '') {
+                sidebar.setAttribute('aria-expanded', 'false');
+                sidebar.style.setProperty('transform', 'translateX(-100%)', 'important');
+                sidebar.style.setProperty('-webkit-transform', 'translateX(-100%)', 'important');
+                sidebar.style.setProperty('visibility', 'hidden', 'important');
+                sidebar.style.setProperty('display', 'none', 'important');
+                try { document.body.classList.remove('sidebar-open'); } catch(e){}
+            }
+        }
         ensureSidebarVisible();
         createToggle();
         
@@ -937,169 +948,182 @@ if df is not None:
         <p class="subtitle" style="margin-top: 0 !important; padding-top: 0 !important; margin-bottom: 0 !important;">Track Your Spending, Income, and Savings Over Time - Demonstrated with dummy data</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Note: removed the floating "Filters" toggle to keep the UI minimal
     
-    # Sidebar Filters
-    st.sidebar.markdown("### 📊 FILTERS")
-    
-    # Reset filters button at the top of filters
-    col_reset1, col_reset2 = st.sidebar.columns(2)
-    with col_reset1:
-        if st.sidebar.button("🔄 Reset", key="reset_filters", use_container_width=True):
-            # Clear all filter keys from session state to reset to defaults
-            for key in ['start_date', 'end_date', 'year_filter', 'product_filter', 'type_filter', 'category_filter',
-                       'start_date_main', 'end_date_main', 'year_filter_main', 'category_filter_main']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
-    with col_reset2:
-        if st.sidebar.button("🗑️ Clear Cache", key="clear_cache", use_container_width=True):
-            # Clear the data cache
-            load_data.clear()
-            st.rerun()
-    
-    # Date Range - Improved handling
+    # Inline Filters (no sidebar) — simple time range + category
     min_date = df['Date'].min().date()
     max_date = df['Date'].max().date()
-    
-    st.sidebar.markdown("**Date Range**")
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        start_date = st.date_input(
-            "Start Date",
-            value=st.session_state.get('start_date', min_date),
-            min_value=min_date,
-            max_value=max_date,
-            key="start_date",
-            label_visibility="collapsed"
-        )
-    with col2:
-        end_date = st.date_input(
-            "End Date",
-            value=st.session_state.get('end_date', max_date),
-            min_value=min_date,
-            max_value=max_date,
-            key="end_date",
-            label_visibility="collapsed"
-        )
-    
-    # Ensure start_date <= end_date
-    if start_date > end_date:
-        st.sidebar.warning("Start date must be before end date. Adjusting...")
-        start_date, end_date = min_date, max_date
-    
-    # Apply date range filter first to get available options for other filters
-    date_filtered_df = df[
-        (df['Date'].dt.date >= start_date) & 
-        (df['Date'].dt.date <= end_date)
-    ].copy()
-    
-    # Year filter - populate from date-filtered data
-    st.sidebar.markdown("**Year**")
-    if len(date_filtered_df) > 0:
-        years = ['All'] + sorted(date_filtered_df['Year'].unique().tolist())
-    else:
-        years = ['All'] + sorted(df['Year'].unique().tolist())
-    
-    # Get current selection or default to 'All'
-    current_year = st.session_state.get('year_filter', 'All')
-    if current_year not in years:
-        current_year = 'All'
-    
-    selected_year = st.sidebar.selectbox(
-        "Select Year",
-        years,
-        index=years.index(current_year),
-        key="year_filter",
-        label_visibility="collapsed"
-    )
-    
-    # Account Type filter - populate from date-filtered data
-    st.sidebar.markdown("**Account Type**")
-    if len(date_filtered_df) > 0:
-        products = ['All'] + sorted(date_filtered_df['Product'].unique().tolist())
-    else:
-        products = ['All'] + sorted(df['Product'].unique().tolist())
-    
-    # Get current selection or default to 'All'
-    current_product = st.session_state.get('product_filter', 'All')
-    if current_product not in products:
-        current_product = 'All'
-    
-    selected_product = st.sidebar.selectbox(
-        "Select Account Type",
-        products,
-        index=products.index(current_product),
-        key="product_filter",
-        label_visibility="collapsed",
-        help="Current, Savings, or Deposit account"
-    )
-    
-    # Transaction Type filter - populate from date-filtered data
-    st.sidebar.markdown("**Transaction Type**")
-    if len(date_filtered_df) > 0:
-        types = ['All'] + sorted(date_filtered_df['Type'].unique().tolist())
-    else:
-        types = ['All'] + sorted(df['Type'].unique().tolist())
-    
-    # Get current selection or default to 'All'
-    current_type = st.session_state.get('type_filter', 'All')
-    if current_type not in types:
-        current_type = 'All'
-    
-    selected_type = st.sidebar.selectbox(
-        "Select Transaction Type",
-        types,
-        index=types.index(current_type),
-        key="type_filter",
-        label_visibility="collapsed"
-    )
-    
-    # Category filter - populate from date-filtered data
-    st.sidebar.markdown("**Category**")
-    if len(date_filtered_df) > 0:
-        categories = ['All'] + sorted(date_filtered_df['Merchant_Category'].unique().tolist())
-    else:
+
+    # Inline filters: three inputs on one line with a slightly shadowed background
+    if 'Merchant_Category' in df.columns:
         categories = ['All'] + sorted(df['Merchant_Category'].unique().tolist())
-    
-    # Get current selection or default to 'All'
-    current_category = st.session_state.get('category_filter', 'All')
+    else:
+        categories = ['All']
+    current_category = st.session_state.get('category_filter_main', 'All')
     if current_category not in categories:
         current_category = 'All'
-    
-    selected_category = st.sidebar.selectbox(
-        "Select Category",
-        categories,
-        index=categories.index(current_category),
-        key="category_filter",
-        label_visibility="collapsed"
+
+    # Inline filter-bar styles: subtle shadow, dark translucent background, white inputs
+    st.markdown(
+        """
+        <style>
+        /* Make filter bar visually transparent under the header (no dark background) */
+        .filter-bar { background: transparent !important; padding: 6px 0 !important; border-radius: 0 !important; box-shadow: none !important; margin-bottom: 8px !important; }
+
+        /* Force white text for all labels and control values inside the filter bar */
+        .filter-bar, .filter-bar * {
+            color: #ffffff !important;
+        }
+
+        /* Ensure inputs, select boxes and date inputs show white text and a subtle dark background for contrast */
+        .filter-bar input,
+        .filter-bar select,
+        .filter-bar textarea,
+        .filter-bar [data-baseweb="input"] input,
+        .filter-bar [data-baseweb="select"] > div,
+        .filter-bar .stDateInput input,
+        .filter-bar .stSelectbox [data-baseweb="select"] > div {
+            color: #ffffff !important;
+            background: rgba(255,255,255,0.04) !important;
+        }
+
+        /* Fix placeholder and selected-value color inside baseweb widgets */
+        .filter-bar [data-baseweb="input"]::placeholder,
+        .filter-bar [data-baseweb="input"] input::placeholder,
+        .filter-bar [data-baseweb="select"] [role="button"] {
+            color: rgba(255,255,255,0.85) !important;
+        }
+
+        /* Make sure labels and helper text use the budget/header accent color for emphasis */
+        .filter-bar label,
+        .filter-bar .css-1v0mbdj,
+        .filter-bar .stDateInput label,
+        .filter-bar .stSelectbox label {
+            color: #00f5ff !important; /* match h2/header accent */
+            font-weight: 600 !important;
+        }
+
+        /* Custom label rendered above each control inside the filter-bar */
+        .filter-label {
+            color: #00f5ff !important;
+            font-weight: 700 !important;
+            font-size: 0.9rem !important;
+            margin-bottom: 0.25rem !important;
+        }
+
+        /* Explicitly target the three inline filters by aria-label to ensure white text/background */
+
+        /* Controls themselves: keep value text white, but show label/selected-value in accent */
+        input[aria-label="Start Date"],
+        div[aria-label="Start Date"],
+        button[aria-label="Start Date"],
+        input[aria-label="End Date"],
+        div[aria-label="End Date"],
+        button[aria-label="End Date"],
+        select[aria-label="Category"],
+        div[aria-label="Category"],
+        button[aria-label="Category"] {
+            color: #ffffff !important; /* actual input/value text */
+            background: rgba(255,255,255,0.04) !important;
+            border-color: rgba(255,255,255,0.06) !important;
+        }
+
+        /* Emphasize the visible label/selected-value with the accent color */
+        [aria-label="Start Date"] + div,
+        [aria-label="End Date"] + div,
+        [aria-label="Category"] + div,
+        select[aria-label="Category"] option {
+            color: #00f5ff !important;
+        }
+
+        /* Strong overrides for Streamlit/BaseWeb date inputs (webkit + generic) */
+        .filter-bar .stDateInput,
+        .filter-bar .stDateInput *,
+        .filter-bar .stDateInput [data-baseweb="input"],
+        .filter-bar .stDateInput [data-baseweb="input"] input,
+        .filter-bar input[type="date"],
+        .filter-bar input[type="text"] {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important; /* Safari/Chrome */
+            background: rgba(255,255,255,0.04) !important;
+        }
+
+        /* Specific pseudo-elements for webkit datetime inputs */
+        .filter-bar input::-webkit-datetime-edit,
+        .filter-bar input::-webkit-datetime-edit-text,
+        .filter-bar input::-webkit-datetime-edit-month-field,
+        .filter-bar input::-webkit-datetime-edit-day-field,
+        .filter-bar input::-webkit-datetime-edit-year-field {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+        }
+
+        /* Placeholder color override */
+        .filter-bar input::placeholder,
+        .filter-bar [data-baseweb="input"] input::placeholder {
+            color: rgba(255,255,255,0.65) !important;
+        }
+
+        /* Ensure placeholder and selected-value inside those specific controls are readable */
+        input[aria-label="Start Date"]::placeholder,
+        input[aria-label="End Date"]::placeholder,
+        select[aria-label="Category"] option {
+            color: rgba(255,255,255,0.85) !important;
+        }
+        </style>
+        <div class="filter-bar">
+        """,
+        unsafe_allow_html=True,
     )
+
+    cols = st.columns([2, 2, 1])
+    # Render custom labels attached to each control (hides Streamlit's native labels)
+    # This puts the title directly above/control, improving styling consistency across browsers
+    with cols[0]:
+        st.markdown('<div class="filter-label">Start Date</div>', unsafe_allow_html=True)
+        start_date = st.date_input(
+            "",
+            value=st.session_state.get('start_date_main', min_date),
+            min_value=min_date,
+            max_value=max_date,
+            key="start_date_main",
+            label_visibility="collapsed"
+        )
+    with cols[1]:
+        st.markdown('<div class="filter-label">End Date</div>', unsafe_allow_html=True)
+        end_date = st.date_input(
+            "",
+            value=st.session_state.get('end_date_main', max_date),
+            min_value=min_date,
+            max_value=max_date,
+            key="end_date_main",
+            label_visibility="collapsed"
+        )
+    with cols[2]:
+        st.markdown('<div class="filter-label">Category</div>', unsafe_allow_html=True)
+        selected_category = st.selectbox(
+            "",
+            categories,
+            index=categories.index(current_category),
+            key="category_filter_main",
+            label_visibility="collapsed"
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
     
-    # Budget variable (for use in dashboard, but not shown in sidebar)
+    # Budget variable (for use in dashboard)
     monthly_budget = 1000
     
-    # Apply all filters sequentially
+    # Apply simple filters sequentially (date range + category)
     filtered_df = df.copy()
-    
+
     if len(filtered_df) > 0:
-        # Date range filter
         filtered_df = filtered_df[
-            (filtered_df['Date'].dt.date >= start_date) & 
+            (filtered_df['Date'].dt.date >= start_date) &
             (filtered_df['Date'].dt.date <= end_date)
         ]
-        
-        # Year filter
-        if selected_year != 'All':
-            filtered_df = filtered_df[filtered_df['Year'] == selected_year]
-        
-        # Account Type filter
-        if selected_product != 'All':
-            filtered_df = filtered_df[filtered_df['Product'] == selected_product]
-        
-        # Transaction Type filter
-        if selected_type != 'All':
-            filtered_df = filtered_df[filtered_df['Type'] == selected_type]
-        
-        # Category filter
+
         if selected_category != 'All':
             filtered_df = filtered_df[filtered_df['Merchant_Category'] == selected_category]
     
@@ -1242,12 +1266,16 @@ if df is not None:
     budget_col1, budget_col2 = st.columns([3, 1])  # Budget column much wider
     
     with budget_col1:
-        # Budget card - cleaner style, blue when not exceeded, red when exceeded
+        # Budget card - green when under budget, red when exceeded
         is_over_budget = current_month_expenses > monthly_budget
-        budget_color = "#00f5ff" if not is_over_budget else "#ff0000"  # Blue when not exceeded, red when exceeded
-        spent_color = "#00f5ff" if not is_over_budget else "#ff0000"
-        
-        st.markdown(f"""
+        # Use green for within budget, red for exceeded
+        budget_color = "#28a745" if not is_over_budget else "#ff0000"
+        spent_color = "#28a745" if not is_over_budget else "#ff0000"
+
+        # Build warning HTML separately to avoid complex inline f-string expressions
+        warning_html = '<span style="color: #ff0000; font-size: 0.7rem; font-weight: 700;">⚠️ BUDGET EXCEEDED!</span>' if is_over_budget else ''
+
+        html = f"""
         <div style="background: rgba(138, 43, 226, 0.08); backdrop-filter: blur(10px); padding: 1rem 1.25rem; border-radius: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <span style="color: #a0a0a0; font-size: 0.75rem;">Spent this month</span>
@@ -1257,13 +1285,13 @@ if df is not None:
                 <div style="height: 100%; width: {min(budget_used_pct, 100)}%; background: {budget_color}; transition: width 0.3s;"></div>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: #a0a0a0; font-size: 0.7rem;">
-                    {budget_used_pct:.1f}% used • €{max(budget_remaining, 0):,.2f} remaining
-                </span>
-                {'<span style="color: #ff0000; font-size: 0.7rem; font-weight: 700;">⚠️ BUDGET EXCEEDED!</span>' if is_over_budget else ''}
+                <span style="color: #a0a0a0; font-size: 0.7rem;">{budget_used_pct:.1f}% used • €{max(budget_remaining, 0):,.2f} remaining</span>
+                {warning_html}
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+
+        st.markdown(html, unsafe_allow_html=True)
     
     with budget_col2:
         # Savings Rate - cleaner design matching budget style
