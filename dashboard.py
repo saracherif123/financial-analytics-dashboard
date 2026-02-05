@@ -2442,23 +2442,7 @@ if df is not None:
             # Check for API key in environment or session state
             api_key = os.getenv("GEMINI_API_KEY") or st.session_state.get("gemini_api_key", "")
             
-            if not api_key:
-                with st.expander("🔑 Enable AI (Free - Google Gemini)", expanded=False):
-                    st.markdown("""
-                    **Get your free API key:**
-                    1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey)
-                    2. Sign in with your Google account
-                    3. Click "Create API Key"
-                    4. Paste it below
-                    
-                    The free tier includes generous usage limits!
-                    """)
-                    api_key_input = st.text_input("Enter your Gemini API Key:", type="password", key="api_key_input")
-                    if api_key_input:
-                        st.session_state.gemini_api_key = api_key_input
-                        api_key = api_key_input
-                        st.success("✅ API key saved! Refresh to use AI.")
-            
+           
             if api_key:
                 try:
                     genai.configure(api_key=api_key)
